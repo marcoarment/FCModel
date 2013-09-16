@@ -33,13 +33,13 @@ static NSMutableDictionary *g_primaryKeyFieldName = NULL;
 
 
 // FCFieldInfo is used for NULL/NOT NULL rules and default values
-typedef enum {
+typedef NS_ENUM(NSInteger, FCFieldType) {
     FCFieldTypeOther = 0,
     FCFieldTypeText,
     FCFieldTypeInteger,
     FCFieldTypeDouble,
     FCFieldTypeBool
-} FCFieldType;
+};
 
 @interface FCFieldInfo : NSObject
 @property (nonatomic, assign) BOOL nullAllowed;
