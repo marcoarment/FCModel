@@ -33,14 +33,18 @@ NSString * const FCModelRecacheNotification = @"FCModelRecacheNotification";
     if ( (self = [super init]) ) {
         self.classCaches = [NSMutableDictionary dictionary];
         self.readLock = dispatch_semaphore_create(1);
+#if TARGET_OS_IPHONE
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(didReceiveMemoryWarning:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+#endif
     }
     return self;
 }
 
 - (void)dealloc
 {
+#if TARGET_OS_IPHONE
     [NSNotificationCenter.defaultCenter removeObserver:self name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+#endif
 }
 
 - (void)saveInstance:(FCModel *)instance
