@@ -21,12 +21,12 @@ extern NSString * const FCModelUpdateNotification;
 extern NSString * const FCModelDeleteNotification;
 extern NSString * const FCModelInstanceKey;
 
-typedef enum {
+typedef NS_ENUM(NSInteger, FCModelSaveResult) {
     FCModelSaveFailed = 0, // SQLite refused a query. Check .lastSQLiteError
     FCModelSaveRefused,    // The instance blocked the operation from a should* method.
     FCModelSaveSucceeded,
     FCModelSaveNoChanges
-} FCModelSaveResult;
+};
 
 @interface FCModel : NSObject
 
