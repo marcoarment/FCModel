@@ -137,6 +137,18 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     dispatch_semaphore_signal(g_instancesReadLock);
 }
 
+- (void)removeUniqueInstance
+{
+    id primaryKeyValue = self.primaryKey;
+    if (! primaryKeyValue || primaryKeyValue == [NSNull null]) return;
+    [self.class uniqueMapInit];
+    
+    dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
+    NSMapTable *classCache = g_instances[self.class];
+    [classCache removeObjectForKey:primaryKeyValue];
+    dispatch_semaphore_signal(g_instancesReadLock);
+}
+
 + (instancetype)instanceFromDatabaseWithPrimaryKey:(id)key
 {
     __block FCModel *model = NULL;
@@ -646,6 +658,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     existsInDatabase = NO;
     [self didDelete];
     [NSNotificationCenter.defaultCenter postNotificationName:FCModelDeleteNotification object:self.class userInfo:@{ FCModelInstanceKey : self }];
+    [self removeUniqueInstance];
     
     return FCModelSaveSucceeded;
 }
