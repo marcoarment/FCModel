@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>9A428A2F-F1D7-474F-BA68-96BDBF4B8630</string>
+	<key>IDESourceControlProjectName</key>
+	<string>FCModelTest</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>50C706B4-8AD8-4EE3-A22A-3F11A2A6AB2F</key>
+		<string>ssh://github.com/marcoarment/FCModel.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>example/FCModelTest.xcodeproj/project.xcworkspace</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>50C706B4-8AD8-4EE3-A22A-3F11A2A6AB2F</key>
+		<string>../../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>ssh://github.com/marcoarment/FCModel.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>110</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>50C706B4-8AD8-4EE3-A22A-3F11A2A6AB2F</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>50C706B4-8AD8-4EE3-A22A-3F11A2A6AB2F</string>
+			<key>IDESourceControlWCCName</key>
+			<string>FCModel</string>
+		</dict>
+	</array>
+</dict>
+</plist>
