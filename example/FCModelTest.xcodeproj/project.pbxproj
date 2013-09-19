@@ -15,7 +15,6 @@
 		A9EEFAD317E4C8EE0066C5EA /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = A9EEFAD217E4C8EE0066C5EA /* AppDelegate.m */; };
 		A9EEFADC17E4C8EE0066C5EA /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = A9EEFADB17E4C8EE0066C5EA /* ViewController.m */; };
 		A9EEFAFF17E4CB300066C5EA /* FCModel.m in Sources */ = {isa = PBXBuildFile; fileRef = A9EEFAFC17E4CB300066C5EA /* FCModel.m */; };
-		A9EEFB0017E4CB300066C5EA /* FCModelCache.m in Sources */ = {isa = PBXBuildFile; fileRef = A9EEFAFE17E4CB300066C5EA /* FCModelCache.m */; };
 		A9EEFB0D17E4CB870066C5EA /* FMDatabase.m in Sources */ = {isa = PBXBuildFile; fileRef = A9EEFB0317E4CB870066C5EA /* FMDatabase.m */; };
 		A9EEFB1017E4CB870066C5EA /* FMDatabaseQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = A9EEFB0917E4CB870066C5EA /* FMDatabaseQueue.m */; };
 		A9EEFB1217E4CB870066C5EA /* FMResultSet.m in Sources */ = {isa = PBXBuildFile; fileRef = A9EEFB0C17E4CB870066C5EA /* FMResultSet.m */; };
@@ -46,8 +45,6 @@
 		A9EEFADB17E4C8EE0066C5EA /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		A9EEFAFB17E4CB300066C5EA /* FCModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModel.h; sourceTree = "<group>"; };
 		A9EEFAFC17E4CB300066C5EA /* FCModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModel.m; sourceTree = "<group>"; };
-		A9EEFAFD17E4CB300066C5EA /* FCModelCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelCache.h; sourceTree = "<group>"; };
-		A9EEFAFE17E4CB300066C5EA /* FCModelCache.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelCache.m; sourceTree = "<group>"; };
 		A9EEFB0217E4CB870066C5EA /* FMDatabase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FMDatabase.h; sourceTree = "<group>"; };
 		A9EEFB0317E4CB870066C5EA /* FMDatabase.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FMDatabase.m; sourceTree = "<group>"; };
 		A9EEFB0817E4CB870066C5EA /* FMDatabaseQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FMDatabaseQueue.h; sourceTree = "<group>"; };
@@ -154,8 +151,6 @@
 			children = (
 				A9EEFAFB17E4CB300066C5EA /* FCModel.h */,
 				A9EEFAFC17E4CB300066C5EA /* FCModel.m */,
-				A9EEFAFD17E4CB300066C5EA /* FCModelCache.h */,
-				A9EEFAFE17E4CB300066C5EA /* FCModelCache.m */,
 			);
 			name = FCModel;
 			path = ../../FCModel;
@@ -253,7 +248,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A9EEFB0017E4CB300066C5EA /* FCModelCache.m in Sources */,
 				A9EEFB2817E6AF970066C5EA /* Color.m in Sources */,
 				A9EEFB2C17E6BCF80066C5EA /* FMDatabasePool.m in Sources */,
 				A9EEFB2117E4E39A0066C5EA /* RandomThings.m in Sources */,

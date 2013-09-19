@@ -69,6 +69,8 @@
     }];
     
 
+    Color *testUniqueRed0 = [Color instanceWithPrimaryKey:@"red"];
+
     // Prepopulate the Color table
     [@{
         @"red" : @"FF3838",
@@ -87,7 +89,13 @@
         [c save];
     }];
     
+    Color *testUniqueRed1 = [Color instanceWithPrimaryKey:@"red"];
     NSArray *allColors = [Color allInstances];
+    Color *testUniqueRed2 = [Color instanceWithPrimaryKey:@"red"];
+    
+    NSAssert(testUniqueRed0 == testUniqueRed1, @"Instance-uniqueness check 1 failed");
+    NSAssert(testUniqueRed1 == testUniqueRed2, @"Instance-uniqueness check 2 failed");
+
 
     // Comment/uncomment this to see caching/retention behavior.
     // Without retaining these, scroll the collectionview, and you'll see each cell performing a SELECT to look up its color.

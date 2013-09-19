@@ -55,14 +55,13 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (NSError *)executeUpdateQuery:(NSString *)query, ...;
 
 // CRUD basics
-+ (instancetype)instanceWithPrimaryKey:(id)keyValue;
-- (instancetype)initWithFieldValues:(NSDictionary *)fieldValues existsInDatabaseAlready:(BOOL)existsInDB;
++ (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue; // will create if nonexistent
++ (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create;
 - (FCModelSaveResult)revertUnsavedChanges;
 - (FCModelSaveResult)revertUnsavedChangeToFieldName:(NSString *)fieldName;
 - (FCModelSaveResult)delete;
 - (FCModelSaveResult)save;
 + (void)saveAll; // Resolved by class: call on FCModel to save all, on a subclass to save just those and their subclasses, etc.
-+ (NSArray *)allLoadedInstances; // Returns all instances that exist in memory. Resolved by class.
 
 // SELECTs
 // - "keyed" variants return dictionaries keyed by each instance's primary-key value.

@@ -8,7 +8,6 @@
 #import <objc/runtime.h>
 #import <string.h>
 #import "FCModel.h"
-#import "FCModelCache.h"
 #import "FMDatabase.h"
 #import "FMDatabaseQueue.h"
 
@@ -24,7 +23,8 @@ static NSString * const FCModelClassKey           = @"class";
 static FMDatabaseQueue *g_databaseQueue = NULL;
 static NSMutableDictionary *g_fieldInfo = NULL;
 static NSMutableDictionary *g_primaryKeyFieldName = NULL;
-
+static NSMutableDictionary *g_instances = NULL;
+static dispatch_semaphore_t g_instancesReadLock;
 
 @interface FMDatabase (HackForVAListsSinceThisIsPrivate)
 - (FMResultSet *)executeQuery:(NSString *)sql withArgumentsInArray:(NSArray*)arrayArgs orDictionary:(NSDictionary *)dictionaryArgs orVAList:(va_list)args;
@@ -83,28 +83,76 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 - (void)didUpdate { }
 - (void)didDelete { }
 
-#pragma mark - Instance caching
+#pragma mark - Instance tracking and uniquing
 
-+ (instancetype)cachedInstanceWithPrimaryKey:(id)key
++ (void)uniqueMapInit
 {
-    return [FCModelCache.sharedInstance instanceOfClass:self withPrimaryKey:key];
+    static dispatch_once_t token;
+    dispatch_once(&token, ^{
+        g_instancesReadLock = dispatch_semaphore_create(1);
+        g_instances = [NSMutableDictionary dictionary];
+    });
+}
+
++ (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue { return [self instanceWithPrimaryKey:primaryKeyValue databaseRowValues:nil createIfNonexistent:YES]; }
++ (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create { return [self instanceWithPrimaryKey:primaryKeyValue databaseRowValues:nil createIfNonexistent:create]; }
+
++ (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue databaseRowValues:(NSDictionary *)fieldValues createIfNonexistent:(BOOL)create
+{
+    if (! primaryKeyValue || primaryKeyValue == [NSNull null]) return [self new];
+    [self uniqueMapInit];
+    
+    FCModel *instance = NULL;
+    dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
+
+    NSMapTable *classCache = g_instances[self];
+    if (! classCache) classCache = g_instances[(id) self] = [NSMapTable strongToWeakObjectsMapTable];
+    
+    instance = [classCache objectForKey:primaryKeyValue];
+    if (! instance) {
+        // Not in memory yet. Check DB.
+        instance = fieldValues ? [[self alloc] initWithFieldValues:fieldValues existsInDatabaseAlready:YES] : [self instanceFromDatabaseWithPrimaryKey:primaryKeyValue];
+        if (! instance && create) {
+            // Create new with this key.
+            instance = [[self alloc] initWithFieldValues:@{ g_primaryKeyFieldName[self] : primaryKeyValue } existsInDatabaseAlready:NO];
+        }
+        
+        if (instance) [classCache setObject:instance forKey:primaryKeyValue];
+    }
+
+    dispatch_semaphore_signal(g_instancesReadLock);
+    return instance;
+}
+
+- (void)registerUniqueInstance
+{
+    id primaryKeyValue = self.primaryKey;
+    if (! primaryKeyValue || primaryKeyValue == [NSNull null]) return;
+    [self.class uniqueMapInit];
+
+    dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
+    NSMapTable *classCache = g_instances[self.class];
+    if (! classCache) classCache = g_instances[(id) self.class] = [NSMapTable strongToWeakObjectsMapTable];
+    [classCache setObject:self forKey:primaryKeyValue];
+    dispatch_semaphore_signal(g_instancesReadLock);
+}
+
++ (instancetype)instanceFromDatabaseWithPrimaryKey:(id)key
+{
+    __block FCModel *model = NULL;
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet *s = [db executeQuery:[self expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], key];
+        if (! s) [self queryFailedInDatabase:db];
+        if ([s next]) model = [[self alloc] initWithFieldValues:s.resultDictionary existsInDatabaseAlready:YES];
+        [s close];
+    }];
+    
+    return model;
 }
 
 + (void)dataWasUpdatedExternally
 {
-    if (self == [FCModel class]) {
-        [FCModelCache.sharedInstance removeAllInstances];
-    } else {
-        [FCModelCache.sharedInstance removeAllInstancesOfClass:self];
-    }
-    
     [NSNotificationCenter.defaultCenter postNotificationName:FCModelReloadNotification object:nil userInfo:@{ FCModelClassKey : self }];
-}
-
-- (void)saveToCache
-{
-    if (deleted) return;
-    [FCModelCache.sharedInstance saveInstance:self];
 }
 
 #pragma mark - Mapping properties to database fields
@@ -192,31 +240,6 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     return error;
 }
 
-+ (instancetype)_cachedInstanceOrInstanceFromDatabaseFieldValues:(NSDictionary *)fieldValues
-{
-    FCModel *instance = [FCModelCache.sharedInstance instanceOfClass:self withPrimaryKey:fieldValues[self.primaryKeyFieldName]];
-    if (instance) return instance;
-    
-    instance = [[self alloc] initWithFieldValues:fieldValues existsInDatabaseAlready:YES];
-    [instance saveToCache];
-    return instance;
-}
-
-+ (instancetype)existingInstanceWithPrimaryKey:(id)key
-{
-    __block FCModel *model = [self cachedInstanceWithPrimaryKey:key];
-    if (model) return model;
-
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], key];
-        if (! s) [self queryFailedInDatabase:db];
-        if ([s next]) model = [self _cachedInstanceOrInstanceFromDatabaseFieldValues:s.resultDictionary];
-        [s close];
-    }];
-    
-    return model;
-}
-
 + (id)_instancesWhere:(NSString *)query andArgs:(va_list)args orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
 {
     NSMutableArray *instances;
@@ -229,7 +252,8 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     }
     
     void (^processResult)(FMResultSet *, BOOL *) = ^(FMResultSet *s, BOOL *stop){
-        instance = [self _cachedInstanceOrInstanceFromDatabaseFieldValues:s.resultDictionary];
+        NSDictionary *rowDictionary = s.resultDictionary;
+        instance = [self instanceWithPrimaryKey:rowDictionary[g_primaryKeyFieldName[self]] databaseRowValues:rowDictionary createIfNonexistent:NO];
         if (onlyFirst) {
             *stop = YES;
             return;
@@ -352,35 +376,12 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 #pragma mark - Attributes and CRUD
 
-+ (instancetype)instanceWithPrimaryKey:(id)keyValue
-{
-    FCModel *existing;
-    @synchronized (self) {
-        existing = [self existingInstanceWithPrimaryKey:keyValue];
-        if (! existing) existing = [self newWithPrimaryKey:keyValue];
-    }
-    return existing;
-}
-
-
-+ (instancetype)newWithPrimaryKey:(id)key
-{
-    FCModel *instance = [self new];
-    if (instance) [instance setValue:key forKey:g_primaryKeyFieldName[self]];
-    return instance;
-}
-
-+ (instancetype)new
-{
-    return [[self alloc] initWithFieldValues:@{} existsInDatabaseAlready:NO];
-}
-
++ (instancetype)new  { return [[self alloc] initWithFieldValues:@{} existsInDatabaseAlready:NO]; }
 - (instancetype)init { return [self initWithFieldValues:@{} existsInDatabaseAlready:NO]; }
 
 - (instancetype)initWithFieldValues:(NSDictionary *)fieldValues existsInDatabaseAlready:(BOOL)existsInDB
 {
     if ( (self = [super init]) ) {
-        [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(recache:) name:FCModelRecacheNotification object:nil];
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(reload:) name:FCModelReloadNotification object:nil];
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(saveByNotification:) name:FCModelSaveNotification object:nil];
         existsInDatabase = existsInDB;
@@ -403,20 +404,6 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     }
     return self;
 }
-
-+ (NSArray *)allLoadedInstances
-{
-    return [FCModelCache.sharedInstance allInstancesOfClassAndSubclasses:self];
-}
-
-// Tricky thing in order to maintain only one active instance per primary key value:
-//
-// After the instance cache is cleared for a low-memory warning, some instances may still be retained elsewhere.
-// If the cache doesn't know about them, FCModel can't enforce the one-instance-per-key design.
-// So FCModelCache posts this notification to everyone after clearing itself so it can properly keep track of existing
-//  instances that didn't get deallocated in the memory purge.
-//
-- (void)recache:(NSNotification *)n { [FCModelCache.sharedInstance saveInstance:self]; }
 
 - (void)saveByNotification:(NSNotification *)n
 {
@@ -528,16 +515,10 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 {
     [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelReloadNotification object:nil];
     [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelSaveNotification object:nil];
-    [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelRecacheNotification object:nil];
 
     [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
         [self removeObserver:self forKeyPath:key];
     }];
-    
-    if (deleted) {
-        id primaryKey = self.primaryKey;
-        [FCModelCache.sharedInstance removeDeallocatedInstanceOfClass:self.class withPrimaryKey:primaryKey];
-    }
 }
 
 - (BOOL)existsInDatabase  { return existsInDatabase; }
@@ -629,11 +610,12 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
     if (! primaryKey || primaryKey == [NSNull null]) {
         [self setValue:[NSNumber numberWithUnsignedLongLong:lastInsertID] forKey:g_primaryKeyFieldName[self.class]];
+        [self registerUniqueInstance];
     }
+    
     [self.changedProperties removeAllObjects];
     primaryKeySet = YES;
     existsInDatabase = YES;
-    [self saveToCache];
     
     if (update) {
         [self didUpdate];
