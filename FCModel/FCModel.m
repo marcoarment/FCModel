@@ -104,11 +104,11 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     
     FCModel *instance = NULL;
     dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
-
     NSMapTable *classCache = g_instances[self];
     if (! classCache) classCache = g_instances[(id) self] = [NSMapTable strongToWeakObjectsMapTable];
-    
     instance = [classCache objectForKey:primaryKeyValue];
+    dispatch_semaphore_signal(g_instancesReadLock);
+    
     if (! instance) {
         // Not in memory yet. Check DB.
         instance = fieldValues ? [[self alloc] initWithFieldValues:fieldValues existsInDatabaseAlready:YES] : [self instanceFromDatabaseWithPrimaryKey:primaryKeyValue];
@@ -117,10 +117,13 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
             instance = [[self alloc] initWithFieldValues:@{ g_primaryKeyFieldName[self] : primaryKeyValue } existsInDatabaseAlready:NO];
         }
         
-        if (instance) [classCache setObject:instance forKey:primaryKeyValue];
+        if (instance) {
+            dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
+            [classCache setObject:instance forKey:primaryKeyValue];
+            dispatch_semaphore_signal(g_instancesReadLock);
+        }
     }
 
-    dispatch_semaphore_signal(g_instancesReadLock);
     return instance;
 }
 
