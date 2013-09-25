@@ -808,6 +808,15 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     }];
 }
 
++ (void)closeDatabase
+{
+    [g_databaseQueue close];
+    g_databaseQueue = nil;
+    g_primaryKeyFieldName = nil;
+    g_fieldInfo = nil;
+    [g_instances removeAllObjects];
+}
+
 + (FMDatabaseQueue *)databaseQueue { return g_databaseQueue; }
 
 @end

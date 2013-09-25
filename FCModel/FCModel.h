@@ -37,6 +37,7 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 @property (readonly) NSError *lastSQLiteError;
 
 + (void)openDatabaseAtPath:(NSString *)path withSchemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
++ (void)closeDatabase;
 
 // Feel free to operate on the same database queue with your own queries (IMPORTANT: READ THE NEXT METHOD DEFINITION)
 + (FMDatabaseQueue *)databaseQueue;
