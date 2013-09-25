@@ -8,6 +8,7 @@
 
 #import <XCTest/XCTest.h>
 #import "FCModel.h"
+#import "FCModel+Testing.h"
 #import "SimpleModel.h"
 
 @interface FCModelTest_Tests : XCTestCase

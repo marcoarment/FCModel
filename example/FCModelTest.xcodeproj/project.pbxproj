@@ -13,6 +13,7 @@
 		9230D70317F32EF1000C9C87 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9230D70117F32EF1000C9C87 /* InfoPlist.strings */; };
 		9230D70517F32EF1000C9C87 /* FCModelTest_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9230D70417F32EF1000C9C87 /* FCModelTest_Tests.m */; };
 		9230D70E17F332F5000C9C87 /* SimpleModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 9230D70D17F332F5000C9C87 /* SimpleModel.m */; };
+		9250891417F3751400BFE66E /* FCModel+Testing.m in Sources */ = {isa = PBXBuildFile; fileRef = 9250891317F3751400BFE66E /* FCModel+Testing.m */; };
 		A9EEFAC317E4C8EE0066C5EA /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC217E4C8EE0066C5EA /* Foundation.framework */; };
 		A9EEFAC517E4C8EE0066C5EA /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC417E4C8EE0066C5EA /* CoreGraphics.framework */; };
 		A9EEFAC717E4C8EE0066C5EA /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC617E4C8EE0066C5EA /* UIKit.framework */; };
@@ -55,6 +56,8 @@
 		9230D70617F32EF1000C9C87 /* FCModelTest Tests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "FCModelTest Tests-Prefix.pch"; sourceTree = "<group>"; };
 		9230D70C17F332F4000C9C87 /* SimpleModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SimpleModel.h; sourceTree = "<group>"; };
 		9230D70D17F332F5000C9C87 /* SimpleModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SimpleModel.m; sourceTree = "<group>"; };
+		9250891217F3751400BFE66E /* FCModel+Testing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "FCModel+Testing.h"; sourceTree = "<group>"; };
+		9250891317F3751400BFE66E /* FCModel+Testing.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "FCModel+Testing.m"; sourceTree = "<group>"; };
 		A9EEFABF17E4C8EE0066C5EA /* FCModelTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FCModelTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A9EEFAC217E4C8EE0066C5EA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		A9EEFAC417E4C8EE0066C5EA /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -121,6 +124,8 @@
 		9230D6FE17F32EF1000C9C87 /* FCModelTest Tests */ = {
 			isa = PBXGroup;
 			children = (
+				9250891217F3751400BFE66E /* FCModel+Testing.h */,
+				9250891317F3751400BFE66E /* FCModel+Testing.m */,
 				9230D70417F32EF1000C9C87 /* FCModelTest_Tests.m */,
 				9230D70C17F332F4000C9C87 /* SimpleModel.h */,
 				9230D70D17F332F5000C9C87 /* SimpleModel.m */,
@@ -340,6 +345,7 @@
 			files = (
 				9230D70517F32EF1000C9C87 /* FCModelTest_Tests.m in Sources */,
 				9230D70E17F332F5000C9C87 /* SimpleModel.m in Sources */,
+				9250891417F3751400BFE66E /* FCModel+Testing.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -544,6 +550,7 @@
 				9230D70A17F32EF1000C9C87 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		A9EEFABA17E4C8EE0066C5EA /* Build configuration list for PBXProject "FCModelTest" */ = {
 			isa = XCConfigurationList;

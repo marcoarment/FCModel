@@ -808,6 +808,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     }];
 }
 
+// Note: use of +closeDatabase is unsupported for apps - it's purely to enable unit testing
 + (void)closeDatabase
 {
     [g_databaseQueue close];
