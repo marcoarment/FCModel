@@ -475,7 +475,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
                 }
                 
                 // NSLog(@"%@ %@ updating \"%@\" [%@]=>[%@]", NSStringFromClass(self.class), self.primaryKey, fieldName, existing, fieldValue);
-                [self setValue:fieldValue forKeyPath:fieldName];
+                [self decodeFieldValue:fieldValue intoPropertyName:fieldName];
                 if (! valueIsStillChanged) [self.changedProperties removeObjectForKey:fieldName];
                 didUpdate = YES;
             }
