@@ -173,7 +173,7 @@ NSLog(@"This Bob's name is now %@.", bob.name);
 [Person executeUpdateQuery:@"DELETE FROM $T WHERE name = 'Sue'"];
 
 NSLog(@"Sue is %@.", sue.deleted ? @"deleted" : @"around");
-// prints: Sue got deleted.
+// prints: Sue is deleted.
 ```
 
 It works. (Or at least, it should. Please let me know if it doesn't.)
