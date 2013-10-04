@@ -119,7 +119,12 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         
         if (instance) {
             dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
-            [classCache setObject:instance forKey:primaryKeyValue];
+            FCModel *racedInstance = [classCache objectForKey:primaryKeyValue];
+            if (racedInstance) {
+                instance = racedInstance;
+            } else {
+                [classCache setObject:instance forKey:primaryKeyValue];
+            }
             dispatch_semaphore_signal(g_instancesReadLock);
         }
     }
