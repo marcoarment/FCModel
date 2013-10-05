@@ -231,7 +231,9 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
             if (! value) [[NSException exceptionWithName:NSInvalidArgumentException reason:@"Invalid URL" userInfo:nil] raise];
         } else if (value && strncmp(attrs, "NSDate", 6) == 0) {
             value = [NSDate dateWithTimeIntervalSince1970:[value integerValue]];
-        }
+        } else if (value && strncmp(attrs, "NSDecimalNumber", 15) == 0) {
+            value = [NSDecimalNumber decimalNumberWithString:[value stringValue]];
+         }
 
         [self setValue:value forKeyPath:propertyName];
     }
