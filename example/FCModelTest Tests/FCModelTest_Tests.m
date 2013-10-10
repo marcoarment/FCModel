@@ -75,8 +75,10 @@
         [db beginTransaction];
         
         void (^failedAt)(int statement) = ^(int statement){
+            int lastErrorCode = db.lastErrorCode;
+            NSString *lastErrorMessage = db.lastErrorMessage;
             [db rollback];
-            NSAssert3(0, @"Migration statement %d failed, code %d: %@", statement, db.lastErrorCode, db.lastErrorMessage);
+            NSAssert3(0, @"Migration statement %d failed, code %d: %@", statement, lastErrorCode, lastErrorMessage);
         };
         
         if (*schemaVersion < 1) {
