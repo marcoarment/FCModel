@@ -5,7 +5,7 @@ Pod::Spec.new do |s|
   s.homepage = 'https://github.com/marcoarment/FCModel'
   s.license = { :type => 'MIT', :file => 'LICENSE' }
   s.author = { 'Marco Arment' => 'me@marco.org' }
-  s.source = { :git => 'https://github.com/marcoarment/FCModel.git', :tag => '0.1.0' }
+  s.source = { :git => 'https://github.com/marcoarment/FCModel.git', :tag => s.version.to_s }
   s.source_files  = 'FCModel/*.{h,m}'
   s.library = 'sqlite3'
   s.requires_arc = true
