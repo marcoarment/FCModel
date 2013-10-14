@@ -21,8 +21,8 @@ static NSString * const FCModelSaveNotification   = @"FCModelSaveNotification";
 static NSString * const FCModelClassKey           = @"class";
 
 static FMDatabaseQueue *g_databaseQueue = NULL;
-static NSMutableDictionary *g_fieldInfo = NULL;
-static NSMutableDictionary *g_primaryKeyFieldName = NULL;
+static NSDictionary *g_fieldInfo = NULL;
+static NSDictionary *g_primaryKeyFieldName = NULL;
 static NSMutableDictionary *g_instances = NULL;
 static dispatch_semaphore_t g_instancesReadLock;
 
@@ -714,8 +714,8 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 + (void)openDatabaseAtPath:(NSString *)path withSchemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder
 {
     g_databaseQueue = [FMDatabaseQueue databaseQueueWithPath:path];
-    g_fieldInfo = [NSMutableDictionary dictionary];
-    g_primaryKeyFieldName = [NSMutableDictionary dictionary];
+    NSMutableDictionary *mutableFieldInfo = [NSMutableDictionary dictionary];
+    NSMutableDictionary *mutablePrimaryKeyFieldName = [NSMutableDictionary dictionary];
     
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
         int startingSchemaVersion = 0;
@@ -806,12 +806,14 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
             }
             
             id classKey = tableModelClass;
-            [g_fieldInfo setObject:fields forKey:classKey];
-            [g_primaryKeyFieldName setObject:primaryKeyName forKey:classKey];
+            [mutableFieldInfo setObject:fields forKey:classKey];
+            [mutablePrimaryKeyFieldName setObject:primaryKeyName forKey:classKey];
             [columnsRS close];
         }
         [tablesRS close];
     
+        g_fieldInfo = [mutableFieldInfo copy];
+        g_primaryKeyFieldName = [mutablePrimaryKeyFieldName copy];
     }];
 }
 
