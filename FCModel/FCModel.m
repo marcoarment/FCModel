@@ -801,6 +801,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
                 }
                 
                 if (isPK) info.defaultValue = nil;
+                else if ([[columnsRS stringForColumnIndex:4] isEqualToString:@"NULL"]) info.defaultValue = nil;
 
                 [fields setObject:info forKey:fieldName];
             }
