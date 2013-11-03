@@ -82,6 +82,10 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (NSArray *)instancesWhere:(NSString *)queryAfterWHERE, ...;
 + (NSDictionary *)keyedInstancesWhere:(NSString *)queryAfterWHERE, ...;
 
+// Fetch a set of primary keys, i.e. "WHERE key IN (...)"
++ (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
++ (NSDictionary *)keyedInstancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
+
 // Return data instead of completed objects (convenient accessors to FCModel's database queue with $T/$PK parsing)
 + (NSArray *)resultDictionariesFromQuery:(NSString *)query, ...;
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...;

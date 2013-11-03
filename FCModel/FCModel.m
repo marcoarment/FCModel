@@ -10,6 +10,7 @@
 #import "FCModel.h"
 #import "FMDatabase.h"
 #import "FMDatabaseQueue.h"
+#import <sqlite3.h>
 
 NSString * const FCModelInsertNotification = @"FCModelInsertNotification";
 NSString * const FCModelUpdateNotification = @"FCModelUpdateNotification";
@@ -277,7 +278,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     return error;
 }
 
-+ (id)_instancesWhere:(NSString *)query andArgs:(va_list)args orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
++ (id)_instancesWhere:(NSString *)query andArgs:(va_list)args orArgsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
 {
     NSMutableArray *instances;
     NSMutableDictionary *keyedInstances;
@@ -310,7 +311,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
                     [self expandQuery:[@"SELECT * FROM \"$T\" WHERE " stringByAppendingString:query]] :
                     [self expandQuery:@"SELECT * FROM \"$T\""]
                 )
-                withArgumentsInArray:nil
+                withArgumentsInArray:argsArray
                 orDictionary:nil
                 orVAList:args
             ];
@@ -324,15 +325,15 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     return onlyFirst ? instance : (keyed ? keyedInstances : instances);
 }
 
-+ (NSArray *)instancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orResultSet:rs onlyFirst:NO keyed:NO]; }
-+ (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orResultSet:rs onlyFirst:NO keyed:YES]; }
-+ (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orResultSet:rs onlyFirst:YES keyed:NO]; }
++ (NSArray *)instancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:NO]; }
++ (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:YES]; }
++ (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:YES keyed:NO]; }
 
 + (instancetype)firstInstanceWhere:(NSString *)query, ...
 {
     va_list args;
     va_start(args, query);
-    id result = [self _instancesWhere:query andArgs:args orResultSet:nil onlyFirst:YES keyed:NO];
+    id result = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO];
     va_end(args);
     return result;
 }
@@ -341,7 +342,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 {
     va_list args;
     va_start(args, query);
-    NSArray *results = [self _instancesWhere:query andArgs:args orResultSet:nil onlyFirst:NO keyed:NO];
+    NSArray *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
     va_end(args);
     return results;
 }
@@ -350,13 +351,55 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 {
     va_list args;
     va_start(args, query);
-    NSDictionary *results = [self _instancesWhere:query andArgs:args orResultSet:nil onlyFirst:NO keyed:NO];
+    NSDictionary *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
     va_end(args);
     return results;
 }
 
-+ (NSArray *)allInstances { return [self _instancesWhere:nil andArgs:NULL orResultSet:nil onlyFirst:NO keyed:NO]; }
-+ (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil andArgs:NULL orResultSet:nil onlyFirst:NO keyed:YES]; }
++ (NSArray *)allInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO]; }
++ (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES]; }
+
++ (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
+{
+    if (primaryKeyValues.count == 0) return @[];
+    
+    __block int maxParameterCount = 0;
+    [self.databaseQueue inDatabase:^(FMDatabase *db) {
+        maxParameterCount = sqlite3_limit(db.sqliteHandle, SQLITE_LIMIT_VARIABLE_NUMBER, -1);
+    }];
+
+    __block NSArray *allFoundInstances = nil;
+    NSMutableArray *valuesArray = [NSMutableArray arrayWithCapacity:MIN(primaryKeyValues.count, maxParameterCount)];
+    NSMutableString *whereClause = [NSMutableString stringWithFormat:@"%@ IN (", g_primaryKeyFieldName[self]];
+    
+    void (^fetchChunk)() = ^{
+        if (valuesArray.count == 0) return;
+        [whereClause appendString:@")"];
+        NSArray *newInstancesThisChunk = [self _instancesWhere:whereClause andArgs:NULL orArgsArray:valuesArray orResultSet:nil onlyFirst:NO keyed:NO];
+        allFoundInstances = allFoundInstances ? [allFoundInstances arrayByAddingObjectsFromArray:newInstancesThisChunk] : newInstancesThisChunk;
+        
+        // reset state for next chunk
+        [whereClause deleteCharactersInRange:NSMakeRange(7, whereClause.length - 7)];
+        [valuesArray removeAllObjects];
+    };
+    
+    for (id pkValue in primaryKeyValues) {
+        [whereClause appendString:(valuesArray.count ? @",?" : @"?")];
+        [valuesArray addObject:pkValue];
+        if (valuesArray.count == maxParameterCount) fetchChunk();
+    }
+    fetchChunk();
+    
+    return allFoundInstances;
+}
+
++ (NSDictionary *)keyedInstancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
+{
+    NSArray *instances = [self instancesWithPrimaryKeyValues:primaryKeyValues];
+    NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:instances.count];
+    for (FCModel *instance in instances) [dictionary setObject:instance forKey:instance.primaryKey];
+    return dictionary;
+}
 
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...
 {
