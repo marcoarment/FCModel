@@ -208,9 +208,18 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     id value = [self valueForKey:fieldName];
     if (! value) return [NSNull null];
     
-    if ([value isKindOfClass:[NSURL class]]) {
+    if ([value isKindOfClass:NSArray.class] || [value isKindOfClass:NSDictionary.class]) {
+        NSError *error = nil;
+        NSData *bplist = [NSPropertyListSerialization dataWithPropertyList:value format:NSPropertyListBinaryFormat_v1_0 options:NSPropertyListImmutable error:&error];
+        if (error) {
+            [[NSException exceptionWithName:NSInvalidArgumentException reason:[NSString stringWithFormat:
+                @"Cannot serialize %@ to plist for %@.%@: %@", NSStringFromClass(((NSObject *)value).class), NSStringFromClass(self.class), fieldName, error.localizedDescription
+            ] userInfo:nil] raise];
+        }
+        return bplist;
+    } else if ([value isKindOfClass:NSURL.class]) {
         return [(NSURL *)value absoluteString];
-    } else if ([value isKindOfClass:[NSDate class]]) {
+    } else if ([value isKindOfClass:NSDate.class]) {
         return [NSNumber numberWithInteger:[(NSDate *)value timeIntervalSince1970]];
     } else {
         return value;
@@ -233,7 +242,13 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
             value = [NSDate dateWithTimeIntervalSince1970:[value integerValue]];
         } else if (value && strncmp(attrs, "NSDecimalNumber", 15) == 0) {
             value = [NSDecimalNumber decimalNumberWithString:[value stringValue]];
-         }
+        } else if (value && strncmp(attrs, "NSDictionary", 12) == 0) {
+            value = [NSPropertyListSerialization propertyListWithData:value options:kCFPropertyListImmutable format:NULL error:NULL];
+            if (! value || ! [value isKindOfClass:NSDictionary.class]) value = @{};
+        } else if (value && strncmp(attrs, "NSArray", 7) == 0) {
+            value = [NSPropertyListSerialization propertyListWithData:value options:kCFPropertyListImmutable format:NULL error:NULL];
+            if (! value || ! [value isKindOfClass:NSArray.class]) value = @[];
+        }
 
         [self setValue:value forKeyPath:propertyName];
     }
