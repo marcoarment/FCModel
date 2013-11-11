@@ -356,6 +356,24 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     return results;
 }
 
++ (instancetype)firstInstanceOrderedBy:(NSString *)query, ...
+{
+    va_list args;
+    va_start(args, query);
+    id result = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO];
+    va_end(args);
+    return result;
+}
+
++ (NSArray *)instancesOrderedBy:(NSString *)query, ...
+{
+    va_list args;
+    va_start(args, query);
+    id result = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
+    va_end(args);
+    return result;
+}
+
 + (NSArray *)allInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO]; }
 + (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES]; }
 
