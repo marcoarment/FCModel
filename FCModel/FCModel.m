@@ -222,6 +222,8 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         return [(NSURL *)value absoluteString];
     } else if ([value isKindOfClass:NSDate.class]) {
         return [NSNumber numberWithInteger:[(NSDate *)value timeIntervalSince1970]];
+    } else if ([value isKindOfClass:[NSDecimalNumber class]]) {
+        return [value stringValue];
     } else {
         return value;
     }
