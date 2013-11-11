@@ -244,7 +244,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         } else if (value && strncmp(attrs, "NSDate", 6) == 0) {
             value = [NSDate dateWithTimeIntervalSince1970:[value integerValue]];
         } else if (value && strncmp(attrs, "NSDecimalNumber", 15) == 0) {
-            value = [NSDecimalNumber decimalNumberWithString:[value stringValue]];
+            value = [NSDecimalNumber decimalNumberWithString:[NSString stringWithFormat: @"%@",value]];
         } else if (value && strncmp(attrs, "NSDictionary", 12) == 0) {
             value = [NSPropertyListSerialization propertyListWithData:value options:kCFPropertyListImmutable format:NULL error:NULL];
             if (! value || ! [value isKindOfClass:NSDictionary.class]) value = @{};
