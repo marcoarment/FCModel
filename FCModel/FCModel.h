@@ -6,8 +6,8 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "FMDatabase.h"
-#import "FMDatabaseQueue.h"
+#import <FMDB/FMDatabase.h>
+#import <FMDB/FMDatabaseQueue.h>
 
 // These notifications use the relevant model's Class as the "object" for convenience so observers can,
 //  for instance, observe every update to any instance of the Person class:
