@@ -83,6 +83,8 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 - (void)didInsert { }
 - (void)didUpdate { }
 - (void)didDelete { }
+- (void)saveWasRefused { }
+- (void)saveDidFail { }
 
 #pragma mark - Instance tracking and uniquing
 
@@ -653,10 +655,16 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     }];
     
     if (update) {
-        if (! [self shouldUpdate]) return FCModelSaveRefused;
+        if (! [self shouldUpdate]) {
+            [self saveWasRefused];
+            return FCModelSaveRefused;
+        }
         columnNames = [self.changedProperties allKeys];
     } else {
-        if (! [self shouldInsert]) return FCModelSaveRefused;
+        if (! [self shouldInsert]) {
+            [self saveWasRefused];
+            return FCModelSaveRefused;
+        }
         NSMutableSet *columnNamesMinusPK = [[NSSet setWithArray:[g_fieldInfo[self.class] allKeys]] mutableCopy];
         [columnNamesMinusPK removeObject:pkName];
         columnNames = [columnNamesMinusPK allObjects];
@@ -706,7 +714,10 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         }
     }];
     
-    if (! success) return FCModelSaveFailed;
+    if (! success) {
+        [self saveDidFail];
+        return FCModelSaveFailed;
+    }
 
     if (! primaryKey || primaryKey == [NSNull null]) {
         [self setValue:[NSNumber numberWithUnsignedLongLong:lastInsertID] forKey:g_primaryKeyFieldName[self.class]];
@@ -731,7 +742,10 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 - (FCModelSaveResult)delete
 {
     if (deleted) return FCModelSaveNoChanges;
-    if (! [self shouldDelete]) return FCModelSaveRefused;
+    if (! [self shouldDelete]) {
+        [self saveWasRefused];
+        return FCModelSaveRefused;
+    }
     
     __block BOOL success = NO;
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
@@ -740,7 +754,10 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         self._lastSQLiteError = success ? nil : db.lastError;
     }];
 
-    if (! success) return FCModelSaveFailed;
+    if (! success) {
+        [self saveDidFail];
+        return FCModelSaveFailed;
+    }
     
     deleted = YES;
     existsInDatabase = NO;

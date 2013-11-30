@@ -103,6 +103,8 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 - (void)didInsert;
 - (void)didUpdate;
 - (void)didDelete;
+- (void)saveWasRefused;
+- (void)saveDidFail;
 
 // Called on subclasses if there's a reload conflict:
 //  - The instance changes field X but doesn't save the changes to the database.
