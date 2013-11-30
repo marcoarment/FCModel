@@ -35,6 +35,7 @@ SQLite tables are associated with FCModel subclasses of the same name, and datab
 CREATE TABLE Person (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     name         TEXT NOT NULL DEFAULT '',
+    salary       TEXT NOT NULL DEFAULT '0',
     createdTime  INTEGER NOT NULL
 );
 
@@ -52,6 +53,7 @@ This table's model would look like this:
 
 @property (nonatomic, assign) int64_t id;
 @property (nonatomic, copy) NSString *name;
+@property (nonatomic) NSDecimalNumber *salary;
 @property (nonatomic) NSDate *createdTime;
 
 @end
@@ -60,6 +62,9 @@ This table's model would look like this:
 You can name your column-property ivars whatever you like, and you can use primitives like `int` or objects like `NSNumber` — your choice. (No structs or blocks.) Since field-change tracking is implemented using KVO, just ensure that if you manipulate properties directly in the class (without using the property accessors), you call `didChangeValueForKey:` afterward to register the change with FCModel.
 
 `NSDate` and `NSURL` objects are automatically converted to/from Unix timestamp integers and absoluteStrings, respectively, for database storage. (Be careful that any column you define as an NSDate fits within the Unix-timestamp range.)
+
+For `NSDecimalNumber` value. SQLite3 does not support customized precision deciaml value ([Datatypes In SQLite Version 3](http://www.sqlite.org/datatype3.html) ).
+So it is recommand to save it as TEXT type.
 
 You can add any other properties you'd like — they don't all need to have database columns.
 
