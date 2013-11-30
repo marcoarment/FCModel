@@ -6,8 +6,14 @@
 //
 
 #import <Foundation/Foundation.h>
+
+#ifdef COCOAPODS
 #import <FMDB/FMDatabase.h>
 #import <FMDB/FMDatabaseQueue.h>
+#else
+#import "FMDatabase.h"
+#import "FMDatabaseQueue.h"
+#endif
 
 // These notifications use the relevant model's Class as the "object" for convenience so observers can,
 //  for instance, observe every update to any instance of the Person class:
@@ -105,6 +111,19 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 - (void)didDelete;
 - (void)saveWasRefused;
 - (void)saveDidFail;
+
+// Subclasses can customize how properties are serialized for the database.
+//
+// FCModel automatically handles numeric primitives, NSString, NSNumber, NSData, NSURL, NSDate, NSDictionary, and NSArray.
+// (Note that NSDate is stored as a time_t, so values before 1970 won't serialize properly.)
+//
+// To override this behavior or customize it for other types, you can implement these methods.
+// You MUST call the super implementation for values that you're not handling.
+//
+// Database values may be NSString or NSNumber for INTEGER/FLOAT/TEXT columns, or NSData for BLOB columns.
+//
+- (id)serializedDatabaseRepresentationOfValue:(id)instanceValue forPropertyNamed:(NSString *)propertyName;
+- (id)unserializedRepresentationOfDatabaseValue:(id)databaseValue forPropertyNamed:(NSString *)propertyName;
 
 // Called on subclasses if there's a reload conflict:
 //  - The instance changes field X but doesn't save the changes to the database.

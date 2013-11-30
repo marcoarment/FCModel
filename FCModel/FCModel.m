@@ -206,56 +206,60 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     if (! isPrimaryKey && self.changedProperties && ! self.changedProperties[keyPath]) [self.changedProperties setObject:(oldValue ?: [NSNull null]) forKey:keyPath];
 }
 
-- (id)encodedValueForFieldName:(NSString *)fieldName
+- (id)serializedDatabaseRepresentationOfValue:(id)instanceValue forPropertyNamed:(NSString *)propertyName
 {
-    id value = [self valueForKey:fieldName];
-    if (! value) return [NSNull null];
-    
-    if ([value isKindOfClass:NSArray.class] || [value isKindOfClass:NSDictionary.class]) {
+    if ([instanceValue isKindOfClass:NSArray.class] || [instanceValue isKindOfClass:NSDictionary.class]) {
         NSError *error = nil;
-        NSData *bplist = [NSPropertyListSerialization dataWithPropertyList:value format:NSPropertyListBinaryFormat_v1_0 options:NSPropertyListImmutable error:&error];
+        NSData *bplist = [NSPropertyListSerialization dataWithPropertyList:instanceValue format:NSPropertyListBinaryFormat_v1_0 options:NSPropertyListImmutable error:&error];
         if (error) {
             [[NSException exceptionWithName:NSInvalidArgumentException reason:[NSString stringWithFormat:
-                @"Cannot serialize %@ to plist for %@.%@: %@", NSStringFromClass(((NSObject *)value).class), NSStringFromClass(self.class), fieldName, error.localizedDescription
+                @"Cannot serialize %@ to plist for %@.%@: %@", NSStringFromClass(((NSObject *)instanceValue).class), NSStringFromClass(self.class), propertyName, error.localizedDescription
             ] userInfo:nil] raise];
         }
         return bplist;
-    } else if ([value isKindOfClass:NSURL.class]) {
-        return [(NSURL *)value absoluteString];
-    } else if ([value isKindOfClass:NSDate.class]) {
-        return [NSNumber numberWithInteger:[(NSDate *)value timeIntervalSince1970]];
-    } else if ([value isKindOfClass:[NSDecimalNumber class]]) {
-        return [value stringValue];
-    } else {
-        return value;
+    } else if ([instanceValue isKindOfClass:NSURL.class]) {
+        return [(NSURL *)instanceValue absoluteString];
+    } else if ([instanceValue isKindOfClass:NSDate.class]) {
+        return [NSNumber numberWithInteger:[(NSDate *)instanceValue timeIntervalSince1970]];
     }
+
+    return instanceValue;
+}
+
+- (id)encodedValueForFieldName:(NSString *)fieldName
+{
+    id value = [self serializedDatabaseRepresentationOfValue:[self valueForKey:fieldName] forPropertyNamed:fieldName];
+    return value ?: [NSNull null];
+}
+
+- (id)unserializedRepresentationOfDatabaseValue:(id)databaseValue forPropertyNamed:(NSString *)propertyName
+{
+    objc_property_t property = class_getProperty(self.class, propertyName.UTF8String);
+    if (property) {
+        const char *attrs = property_getAttributes(property);
+        if (attrs[0] == 'T' && attrs[1] == '@' && attrs[2] == '"') attrs = &(attrs[3]);
+
+        if (databaseValue && strncmp(attrs, "NSURL", 5) == 0) {
+            return [NSURL URLWithString:databaseValue];
+        } else if (databaseValue && strncmp(attrs, "NSDate", 6) == 0) {
+            return [NSDate dateWithTimeIntervalSince1970:[databaseValue integerValue]];
+        } else if (databaseValue && strncmp(attrs, "NSDictionary", 12) == 0) {
+            NSDictionary *dict = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
+            return dict && [dict isKindOfClass:NSDictionary.class] ? dict : @{};
+        } else if (databaseValue && strncmp(attrs, "NSArray", 7) == 0) {
+            NSArray *array = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
+            return array && [array isKindOfClass:NSArray.class] ? array : @[];
+        }
+    }
+
+    return databaseValue;
 }
 
 - (void)decodeFieldValue:(id)value intoPropertyName:(NSString *)propertyName
 {
     if (value == [NSNull null]) value = nil;
-
-    objc_property_t property = class_getProperty(self.class, [propertyName UTF8String]);
-    if (property) {
-        const char *attrs = property_getAttributes(property);
-        if (attrs[0] == 'T' && attrs[1] == '@' && attrs[2] == '"') attrs = &(attrs[3]);
-
-        if (value && strncmp(attrs, "NSURL", 5) == 0) {
-            value = [NSURL URLWithString:value];
-            if (! value) [[NSException exceptionWithName:NSInvalidArgumentException reason:@"Invalid URL" userInfo:nil] raise];
-        } else if (value && strncmp(attrs, "NSDate", 6) == 0) {
-            value = [NSDate dateWithTimeIntervalSince1970:[value integerValue]];
-        } else if (value && strncmp(attrs, "NSDecimalNumber", 15) == 0) {
-            value = [NSDecimalNumber decimalNumberWithString:[value stringValue]];
-        } else if (value && strncmp(attrs, "NSDictionary", 12) == 0) {
-            value = [NSPropertyListSerialization propertyListWithData:value options:kCFPropertyListImmutable format:NULL error:NULL];
-            if (! value || ! [value isKindOfClass:NSDictionary.class]) value = @{};
-        } else if (value && strncmp(attrs, "NSArray", 7) == 0) {
-            value = [NSPropertyListSerialization propertyListWithData:value options:kCFPropertyListImmutable format:NULL error:NULL];
-            if (! value || ! [value isKindOfClass:NSArray.class]) value = @[];
-        }
-
-        [self setValue:value forKeyPath:propertyName];
+    if (class_getProperty(self.class, propertyName.UTF8String)) {
+        [self setValue:[self unserializedRepresentationOfDatabaseValue:value forPropertyNamed:propertyName] forKeyPath:propertyName];
     }
 }
 
