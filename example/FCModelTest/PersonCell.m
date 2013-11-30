@@ -33,7 +33,13 @@
         self.idLabel.text = [NSString stringWithFormat:@"%lld", person.id];
     }
 }
-
+-(void)dealloc {
+    if(self.person) {
+        [self.person removeObserver:self forKeyPath:@"name"];
+        [self.person removeObserver:self forKeyPath:@"colorName"];
+        [self.person removeObserver:self forKeyPath:@"taps"];
+    }
+}
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(Person *)person change:(NSDictionary *)change context:(void *)context
 {
     if ([keyPath isEqualToString:@"name"]) {
