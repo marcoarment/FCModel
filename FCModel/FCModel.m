@@ -105,6 +105,8 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     if (! primaryKeyValue || primaryKeyValue == [NSNull null]) return [self new];
     [self uniqueMapInit];
     
+    primaryKeyValue = [self normalizedPrimaryKeyValue:primaryKeyValue];
+    
     FCModel *instance = NULL;
     dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
     NSMapTable *classCache = g_instances[self];
@@ -265,6 +267,28 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 + (NSArray *)databaseFieldNames     { return [g_fieldInfo[self] allKeys]; }
 + (NSString *)primaryKeyFieldName { return g_primaryKeyFieldName[self]; }
+
+// For unique-instance consistency:
+// Resolve discrepancies between supplied primary-key value type and the column type that comes out of the database.
+// Without this, it's possible to e.g. pull objects with key @(1) and key @"1" as two different instances of the same record.
++ (id)normalizedPrimaryKeyValue:(id)value
+{
+    static NSNumberFormatter *numberFormatter;
+    static dispatch_once_t onceToken;
+
+    if (! value) return value;
+    
+    FCFieldInfo *primaryKeyInfo = g_fieldInfo[self][g_primaryKeyFieldName[self]];
+    
+    if ([value isKindOfClass:NSString.class] && (primaryKeyInfo.type == FCFieldTypeInteger || primaryKeyInfo.type == FCFieldTypeDouble || primaryKeyInfo.type == FCFieldTypeBool)) {
+        dispatch_once(&onceToken, ^{ numberFormatter = [[NSNumberFormatter alloc] init]; });
+        value = [numberFormatter numberFromString:value];
+    } else if (! [value isKindOfClass:NSString.class] && primaryKeyInfo.type == FCFieldTypeText) {
+        value = [value stringValue];
+    }
+
+    return value;
+}
 
 #pragma mark - Find methods
 
