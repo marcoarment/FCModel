@@ -15,7 +15,7 @@
 NSString * const FCModelInsertNotification = @"FCModelInsertNotification";
 NSString * const FCModelUpdateNotification = @"FCModelUpdateNotification";
 NSString * const FCModelDeleteNotification = @"FCModelDeleteNotification";
-NSString * const FCModelInstanceKey = @"FCModelInstanceKey";
+NSString * const FCModelInstanceSetKey = @"FCModelInstanceSetKey";
 
 static NSString * const FCModelReloadNotification = @"FCModelReloadNotification";
 static NSString * const FCModelSaveNotification   = @"FCModelSaveNotification";
@@ -26,6 +26,7 @@ static NSDictionary *g_fieldInfo = NULL;
 static NSDictionary *g_primaryKeyFieldName = NULL;
 static NSMutableDictionary *g_instances = NULL;
 static dispatch_semaphore_t g_instancesReadLock;
+static NSMutableDictionary *g_enqueuedBatchNotifications = NULL;
 
 @interface FMDatabase (HackForVAListsSinceThisIsPrivate)
 - (FMResultSet *)executeQuery:(NSString *)sql withArgumentsInArray:(NSArray*)arrayArgs orDictionary:(NSDictionary *)dictionaryArgs orVAList:(va_list)args;
@@ -572,7 +573,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
     if (deleted) {
         [self didDelete];
-        [NSNotificationCenter.defaultCenter postNotificationName:FCModelDeleteNotification object:self.class userInfo:@{ FCModelInstanceKey : self }];
+        [self postChangeNotification:FCModelDeleteNotification];
     } else {
         __block BOOL didUpdate = NO;
         [resultDictionary enumerateKeysAndObjectsUsingBlock:^(NSString *fieldName, id fieldValue, BOOL *stop) {
@@ -598,7 +599,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
         if (didUpdate) {
             [self didUpdate];
-            [NSNotificationCenter.defaultCenter postNotificationName:FCModelUpdateNotification object:self.class userInfo:@{ FCModelInstanceKey : self }];
+            [self postChangeNotification:FCModelUpdateNotification];
         }
     }
 }
@@ -758,10 +759,10 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     
     if (update) {
         [self didUpdate];
-        [NSNotificationCenter.defaultCenter postNotificationName:FCModelUpdateNotification object:self.class userInfo:@{ FCModelInstanceKey : self }];
+        [self postChangeNotification:FCModelUpdateNotification];
     } else {
         [self didInsert];
-        [NSNotificationCenter.defaultCenter postNotificationName:FCModelInsertNotification object:self.class userInfo:@{ FCModelInstanceKey : self }];
+        [self postChangeNotification:FCModelInsertNotification];
     }
     
     return FCModelSaveSucceeded;
@@ -790,7 +791,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     deleted = YES;
     existsInDatabase = NO;
     [self didDelete];
-    [NSNotificationCenter.defaultCenter postNotificationName:FCModelDeleteNotification object:self.class userInfo:@{ FCModelInstanceKey : self }];
+    [self postChangeNotification:FCModelDeleteNotification];
     [self removeUniqueInstance];
     
     return FCModelSaveSucceeded;
@@ -956,5 +957,81 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 }
 
 + (FMDatabaseQueue *)databaseQueue { return g_databaseQueue; }
+
+#pragma mark - Batch notification queuing
+
++ (dispatch_semaphore_t)notificationBatchLock
+{
+    static dispatch_once_t onceToken;
+    static dispatch_semaphore_t lock;
+    dispatch_once(&onceToken, ^{
+        lock = dispatch_semaphore_create(1);
+    });
+    return lock;
+}
+
++ (void)beginNotificationBatch
+{
+    dispatch_semaphore_t lock = [self notificationBatchLock];
+    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
+    if (! g_enqueuedBatchNotifications) {
+        g_enqueuedBatchNotifications = [NSMutableDictionary dictionary];
+    }
+    dispatch_semaphore_signal(lock);
+}
+
++ (void)endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications
+{
+    if (! g_enqueuedBatchNotifications) return;
+
+    dispatch_semaphore_t lock = [self notificationBatchLock];    
+    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
+    NSDictionary *notificationsToSend = sendQueuedNotifications ? [g_enqueuedBatchNotifications copy] : nil;
+    g_enqueuedBatchNotifications = nil;
+    dispatch_semaphore_signal(lock);
+    
+    if (sendQueuedNotifications) {
+        [notificationsToSend enumerateKeysAndObjectsUsingBlock:^(Class class, NSDictionary *notificationsForClass, BOOL *stop) {
+            [notificationsForClass enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSSet *objects, BOOL *stop) {
+                [NSNotificationCenter.defaultCenter postNotificationName:name object:class userInfo:@{
+                    FCModelInstanceSetKey : objects
+                }];
+            }];
+        }];
+    }
+}
+
+- (void)postChangeNotification:(NSString *)name
+{
+    BOOL enqueued = NO;
+    
+    dispatch_semaphore_t lock = [self.class notificationBatchLock];
+    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
+    if (g_enqueuedBatchNotifications) {
+        id class = self.class;
+        NSMutableDictionary *notificationsForClass = g_enqueuedBatchNotifications[class];
+        if (! notificationsForClass) {
+            notificationsForClass = [NSMutableDictionary dictionary];
+            g_enqueuedBatchNotifications[class] = notificationsForClass;
+        }
+        
+        NSMutableSet *instancesForNotification = notificationsForClass[name];
+        if (instancesForNotification) {
+            [instancesForNotification addObject:self];
+        } else {
+            instancesForNotification = [NSMutableSet setWithObject:self];
+            notificationsForClass[name] = instancesForNotification;
+        }
+        
+        enqueued = YES;
+    }
+    dispatch_semaphore_signal(lock);
+    
+    if (! enqueued) {
+        [NSNotificationCenter.defaultCenter postNotificationName:name object:self.class userInfo:@{
+            FCModelInstanceSetKey : [NSSet setWithObject:self]
+        }];
+    }
+}
 
 @end

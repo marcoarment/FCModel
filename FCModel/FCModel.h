@@ -20,12 +20,13 @@
 //
 //  [NSNotificationCenter.defaultCenter addObserver:... selector:... name:FCModelUpdateNotification object:Person.class];
 //
-// The specific instance acted upon is passed as userInfo[FCModelInstanceKey].
+// The specific instance or instances acted upon are passed as an NSSet in userInfo[FCModelInstanceSetKey].
+// The set will always contain exactly one instance unless you use beginNotificationBatch/endNotificationBatchAndNotify.
 //
 extern NSString * const FCModelInsertNotification;
 extern NSString * const FCModelUpdateNotification;
 extern NSString * const FCModelDeleteNotification;
-extern NSString * const FCModelInstanceKey;
+extern NSString * const FCModelInstanceSetKey;
 
 typedef NS_ENUM(NSInteger, FCModelSaveResult) {
     FCModelSaveFailed = 0, // SQLite refused a query. Check .lastSQLiteError
@@ -135,5 +136,34 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 //
 - (id)valueOfFieldName:(NSString *)fieldName byResolvingReloadConflictWithDatabaseValue:(id)valueInDatabase;
 
+// Notification batches and queuing:
+//
+// A common pattern is to listen for FCModelInsert/Update/DeleteNotification and reload a table or take other expensive UI operations.
+// When small numbers of instances are updated/deleted during normal use, that's fine. But when doing a large operation in which
+//  hundreds or thousands of instances might be changed, responding to these notifications may cause noticeable performance problems.
+//
+// Using this batch-queuing system, you can temporarily suspend delivery of these notifications, then deliver or discard them.
+// Multiple identical notification types for each class will be collected into one. For instance:
+//
+// Without notification batching:
+//
+//     FCModelInsertNotification: Person class, { Sue }
+//     FCModelUpdateNotification: Person class, { Robert }
+//     FCModelUpdateNotification: Person class, { Sarah }
+//     FCModelUpdateNotification: Person class, { James }
+//     FCModelUpdateNotification: Person class, { Kate }
+//     FCModelDeleteNotification: Person class, { Richard }
+//
+// With notification batching:
+//
+//     FCModelInsertNotification: Person class, { Sue }
+//     FCModelUpdateNotification: Person class, { Robert, Sarah, James, Kate }
+//     FCModelDeleteNotification: Person class, { Richard }
+//
+// Be careful: batch notification order is not preserved, and you may be unexpectedly interacting with deleted instances.
+// Always check the given instances' .existsInDatabase property.
+//
++ (void)beginNotificationBatch;
++ (void)endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications;
 
 @end
