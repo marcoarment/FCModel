@@ -10,6 +10,7 @@
 #import "FCModel.h"
 #import "FMDatabase.h"
 #import "FMDatabaseQueue.h"
+#import "FMDatabaseAdditions.h"
 #import <sqlite3.h>
 
 NSString * const FCModelInsertNotification = @"FCModelInsertNotification";
@@ -845,27 +846,33 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
         if (databaseInitializer) databaseInitializer(db);
-        
+
         int startingSchemaVersion = 0;
-        FMResultSet *rs = [db executeQuery:@"SELECT value FROM _FCModelMetadata WHERE key = 'schema_version'"];
-        if ([rs next]) {
-            startingSchemaVersion = [rs intForColumnIndex:0];
+        if ([db tableExists:@"_FCModelMetadata"]) {
+            // Migrate schema version from old _FCModelMetadata table to SQLite's PRAGMA user_version
+            FMResultSet *rs = [db executeQuery:@"SELECT value FROM _FCModelMetadata WHERE key = 'schema_version'"];
+            if ([rs next]) {
+                startingSchemaVersion = [rs intForColumnIndex:0];
+            }
+            [rs close];
+            [db executeUpdate:[NSString stringWithFormat:@"PRAGMA user_version = %d", startingSchemaVersion]];
+            [db executeUpdate:@"DROP TABLE _FCModelMetadata"];
         } else {
-            [db executeUpdate:@"CREATE TABLE _FCModelMetadata (key TEXT, value TEXT, PRIMARY KEY (key))"];
-            [db executeUpdate:@"INSERT INTO _FCModelMetadata VALUES ('schema_version', 0)"];
+            FMResultSet *rs = [db executeQuery:@"PRAGMA user_version"];
+            if ([rs next]) startingSchemaVersion = [rs intForColumnIndex:0];
+            [rs close];
         }
-        [rs close];
         
         int newSchemaVersion = startingSchemaVersion;
         schemaBuilder(db, &newSchemaVersion);
         if (newSchemaVersion != startingSchemaVersion) {
-            [db executeUpdate:@"UPDATE _FCModelMetadata SET value = ? WHERE key = 'schema_version'", @(newSchemaVersion)];
+            [db executeUpdate:[NSString stringWithFormat:@"PRAGMA user_version = %d", newSchemaVersion]];
         }
         
         // Read schema for field names and primary keys
         FMResultSet *tablesRS = [db executeQuery:
-            @"SELECT DISTINCT tbl_name FROM (SELECT * FROM sqlite_master UNION ALL SELECT * FROM sqlite_temp_master) WHERE type != 'meta' AND name NOT LIKE 'sqlite_%' AND name != '_FCModelMetadata'"
-        ];
+            @"SELECT DISTINCT tbl_name FROM (SELECT * FROM sqlite_master UNION ALL SELECT * FROM sqlite_temp_master) WHERE type != 'meta' AND name NOT LIKE 'sqlite_%'"
+       ];
         while ([tablesRS next]) {
             NSString *tableName = [tablesRS stringForColumnIndex:0];
             Class tableModelClass = NSClassFromString(tableName);
