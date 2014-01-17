@@ -876,7 +876,10 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         while ([tablesRS next]) {
             NSString *tableName = [tablesRS stringForColumnIndex:0];
             Class tableModelClass = NSClassFromString(tableName);
-            if (! tableModelClass || ! [tableModelClass isSubclassOfClass:self]) continue;
+            if (! tableModelClass || ! [tableModelClass isSubclassOfClass:self]) {
+                NSLog(@"[FCModel] no table model class for %@", tableName);
+                continue;
+            }
             
             NSString *primaryKeyName = nil;
             BOOL isMultiColumnPrimaryKey = NO;
