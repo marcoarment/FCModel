@@ -79,6 +79,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 #pragma mark - For subclasses to override
 
+- (void)didInit { }
 - (BOOL)shouldInsert { return YES; }
 - (BOOL)shouldUpdate { return YES; }
 - (BOOL)shouldDelete { return YES; }
@@ -87,6 +88,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 - (void)didDelete { }
 - (void)saveWasRefused { }
 - (void)saveDidFail { }
+- (void)didChangeValueForFieldName:(NSString *)fieldName fromValue:(id)oldValue toValue:(id)newValue { }
 
 #pragma mark - Instance tracking and uniquing
 
@@ -97,6 +99,16 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         g_instancesReadLock = dispatch_semaphore_create(1);
         g_instances = [NSMutableDictionary dictionary];
     });
+}
+
++ (NSArray *)allLoadedInstances
+{
+    [self uniqueMapInit];
+    dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
+    NSMapTable *classCache = g_instances[self];
+    NSArray *instances = classCache ? [classCache.objectEnumerator.allObjects copy] : [NSArray array];
+    dispatch_semaphore_signal(g_instancesReadLock);
+    return instances;
 }
 
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue { return [self instanceWithPrimaryKey:primaryKeyValue databaseRowValues:nil createIfNonexistent:YES]; }
@@ -208,6 +220,8 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     }
 
     if (! isPrimaryKey && self.changedProperties && ! self.changedProperties[keyPath]) [self.changedProperties setObject:(oldValue ?: [NSNull null]) forKey:keyPath];
+    
+    [self didChangeValueForFieldName:keyPath fromValue:oldValue toValue:newValue];
 }
 
 - (id)serializedDatabaseRepresentationOfValue:(id)instanceValue forPropertyNamed:(NSString *)propertyName
@@ -533,6 +547,8 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         
         primaryKeyLocked = YES;
         self.changedProperties = [NSMutableDictionary dictionary];
+        
+        [self didInit];
     }
     return self;
 }

@@ -46,6 +46,15 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (void)openDatabaseAtPath:(NSString *)path withSchemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
 + (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
 
++ (NSArray *)databaseFieldNames;
++ (NSString *)primaryKeyFieldName;
+
+// Be careful with this -- the array could be out of date by the time you use it
+//  if a new instance is loaded by another thread. Everything in it is guaranteed
+//  to be a loaded instance, but you're not guaranteed to always have *all* of them
+//  if you perform SELECTs from multiple threads.
++ (NSArray *)allLoadedInstances;
+
 // Feel free to operate on the same database queue with your own queries (IMPORTANT: READ THE NEXT METHOD DEFINITION)
 + (FMDatabaseQueue *)databaseQueue;
 
@@ -104,6 +113,7 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 
 // For subclasses to override, all optional:
 
+- (void)didInit;
 - (BOOL)shouldInsert;
 - (BOOL)shouldUpdate;
 - (BOOL)shouldDelete;
@@ -112,6 +122,12 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 - (void)didDelete;
 - (void)saveWasRefused;
 - (void)saveDidFail;
+
+// A bit redundant with KVO, but friendlier to multi-level subclassing, and only called for
+//  meaningful changes (not setting to same value, or initially loading from the database)
+//  on non-primary-key database columns.
+//
+- (void)didChangeValueForFieldName:(NSString *)fieldName fromValue:(id)oldValue toValue:(id)newValue;
 
 // Subclasses can customize how properties are serialized for the database.
 //
