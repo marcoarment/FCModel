@@ -411,6 +411,15 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     return results;
 }
 
++ (NSNumber *)countOfInstancesWhere:(NSString *)query, ...
+{
+    va_list args;
+    va_start(args, query);
+    NSNumber *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO count:YES];
+    va_end(args);
+    return results;
+}
+
 + (instancetype)firstInstanceOrderedBy:(NSString *)query, ...
 {
     va_list args;
@@ -431,6 +440,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 + (NSArray *)allInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO count:NO]; }
 + (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES count:NO]; }
++ (NSNumber *)countOfInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO count:YES];  }
 
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
 {
