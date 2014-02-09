@@ -34,6 +34,8 @@
     self.people = [Person allInstances];
     NSLog(@"Reloading with %lu people", (unsigned long) self.people.count);
     [self.collectionView reloadData];
+    
+    self.queryField.placeholder = [NSString stringWithFormat:NSLocalizedString(@"%d people (enter SQL UPDATE/DELETE query)", @""), [Person countOfInstances].integerValue];
 }
 
 - (void)dealloc
@@ -81,6 +83,5 @@
     
     [collectionView deselectItemAtIndexPath:indexPath animated:YES];
 }
-
 
 @end
