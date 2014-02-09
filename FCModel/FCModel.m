@@ -326,7 +326,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     return error;
 }
 
-+ (id)_instancesWhere:(NSString *)query andArgs:(va_list)args orArgsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
++ (id)_instancesWhere:(NSString *)query andArgs:(va_list)args orArgsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed count:(BOOL)count
 {
     NSMutableArray *instances;
     NSMutableDictionary *keyedInstances;
@@ -338,8 +338,13 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     }
     
     void (^processResult)(FMResultSet *, BOOL *) = ^(FMResultSet *s, BOOL *stop){
-        NSDictionary *rowDictionary = s.resultDictionary;
-        instance = [self instanceWithPrimaryKey:rowDictionary[g_primaryKeyFieldName[self]] databaseRowValues:rowDictionary createIfNonexistent:NO];
+        if(count) {
+            instance = s[0];
+        }
+        else {
+            NSDictionary *rowDictionary = s.resultDictionary;
+            instance = [self instanceWithPrimaryKey:rowDictionary[g_primaryKeyFieldName[self]] databaseRowValues:rowDictionary createIfNonexistent:NO];
+        }
         if (onlyFirst) {
             *stop = YES;
             return;
@@ -353,12 +358,14 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         while (! stop && [existingResultSet next]) processResult(existingResultSet, &stop);
     } else {
         [g_databaseQueue inDatabase:^(FMDatabase *db) {
+            NSString * q = count ? @"SELECT COUNT(*) FROM \"$T\"" : @"SELECT * FROM \"$T\"";
+            if(query) {
+                q = [[q stringByAppendingString:@" WHERE "] stringByAppendingString:query];
+            }
+            q = [self expandQuery:q];
+            
             FMResultSet *s = [db
-                executeQuery:(
-                    query ?
-                    [self expandQuery:[@"SELECT * FROM \"$T\" WHERE " stringByAppendingString:query]] :
-                    [self expandQuery:@"SELECT * FROM \"$T\""]
-                )
+                executeQuery:q
                 withArgumentsInArray:argsArray
                 orDictionary:nil
                 orVAList:args
@@ -373,15 +380,15 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     return onlyFirst ? instance : (keyed ? keyedInstances : instances);
 }
 
-+ (NSArray *)instancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:NO]; }
-+ (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:YES]; }
-+ (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:YES keyed:NO]; }
++ (NSArray *)instancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:NO count:NO]; }
++ (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:YES count:NO]; }
++ (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:YES keyed:NO count:NO]; }
 
 + (instancetype)firstInstanceWhere:(NSString *)query, ...
 {
     va_list args;
     va_start(args, query);
-    id result = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO];
+    id result = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO count:NO];
     va_end(args);
     return result;
 }
@@ -390,7 +397,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 {
     va_list args;
     va_start(args, query);
-    NSArray *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
+    NSArray *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO count:NO];
     va_end(args);
     return results;
 }
@@ -399,7 +406,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 {
     va_list args;
     va_start(args, query);
-    NSDictionary *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
+    NSDictionary *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO count:NO];
     va_end(args);
     return results;
 }
@@ -408,7 +415,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 {
     va_list args;
     va_start(args, query);
-    id result = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO];
+    id result = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO count:NO];
     va_end(args);
     return result;
 }
@@ -417,13 +424,13 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 {
     va_list args;
     va_start(args, query);
-    id result = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
+    id result = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO count:NO];
     va_end(args);
     return result;
 }
 
-+ (NSArray *)allInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO]; }
-+ (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES]; }
++ (NSArray *)allInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO count:NO]; }
++ (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES count:NO]; }
 
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
 {
@@ -441,7 +448,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     void (^fetchChunk)() = ^{
         if (valuesArray.count == 0) return;
         [whereClause appendString:@")"];
-        NSArray *newInstancesThisChunk = [self _instancesWhere:whereClause andArgs:NULL orArgsArray:valuesArray orResultSet:nil onlyFirst:NO keyed:NO];
+        NSArray *newInstancesThisChunk = [self _instancesWhere:whereClause andArgs:NULL orArgsArray:valuesArray orResultSet:nil onlyFirst:NO keyed:NO count:NO];
         allFoundInstances = allFoundInstances ? [allFoundInstances arrayByAddingObjectsFromArray:newInstancesThisChunk] : newInstancesThisChunk;
         
         // reset state for next chunk
