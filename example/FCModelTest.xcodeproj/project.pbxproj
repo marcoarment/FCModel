@@ -14,6 +14,7 @@
 		9230D70517F32EF1000C9C87 /* FCModelTest_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9230D70417F32EF1000C9C87 /* FCModelTest_Tests.m */; };
 		9230D70E17F332F5000C9C87 /* SimpleModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 9230D70D17F332F5000C9C87 /* SimpleModel.m */; };
 		9250891417F3751400BFE66E /* FCModel+Testing.m in Sources */ = {isa = PBXBuildFile; fileRef = 9250891317F3751400BFE66E /* FCModel+Testing.m */; };
+		A99B9B2218B316DC00D79C6A /* FMDatabaseAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = A99B9B2118B316DC00D79C6A /* FMDatabaseAdditions.m */; };
 		A9EEFAC317E4C8EE0066C5EA /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC217E4C8EE0066C5EA /* Foundation.framework */; };
 		A9EEFAC517E4C8EE0066C5EA /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC417E4C8EE0066C5EA /* CoreGraphics.framework */; };
 		A9EEFAC717E4C8EE0066C5EA /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC617E4C8EE0066C5EA /* UIKit.framework */; };
@@ -58,6 +59,8 @@
 		9230D70D17F332F5000C9C87 /* SimpleModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SimpleModel.m; sourceTree = "<group>"; };
 		9250891217F3751400BFE66E /* FCModel+Testing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "FCModel+Testing.h"; sourceTree = "<group>"; };
 		9250891317F3751400BFE66E /* FCModel+Testing.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "FCModel+Testing.m"; sourceTree = "<group>"; };
+		A99B9B2018B316DC00D79C6A /* FMDatabaseAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FMDatabaseAdditions.h; sourceTree = "<group>"; };
+		A99B9B2118B316DC00D79C6A /* FMDatabaseAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FMDatabaseAdditions.m; sourceTree = "<group>"; };
 		A9EEFABF17E4C8EE0066C5EA /* FCModelTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FCModelTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A9EEFAC217E4C8EE0066C5EA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		A9EEFAC417E4C8EE0066C5EA /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -230,6 +233,8 @@
 				A9EEFB0917E4CB870066C5EA /* FMDatabaseQueue.m */,
 				A9EEFB0B17E4CB870066C5EA /* FMResultSet.h */,
 				A9EEFB0C17E4CB870066C5EA /* FMResultSet.m */,
+				A99B9B2018B316DC00D79C6A /* FMDatabaseAdditions.h */,
+				A99B9B2118B316DC00D79C6A /* FMDatabaseAdditions.m */,
 			);
 			path = FMDB;
 			sourceTree = "<group>";
@@ -361,6 +366,7 @@
 				A9EEFB0D17E4CB870066C5EA /* FMDatabase.m in Sources */,
 				A9EEFAFF17E4CB300066C5EA /* FCModel.m in Sources */,
 				A9EEFB1917E4D0010066C5EA /* PersonCell.m in Sources */,
+				A99B9B2218B316DC00D79C6A /* FMDatabaseAdditions.m in Sources */,
 				A9EEFB1E17E4DCC00066C5EA /* Person.m in Sources */,
 				A9EEFB1217E4CB870066C5EA /* FMResultSet.m in Sources */,
 				A9EEFACF17E4C8EE0066C5EA /* main.m in Sources */,
