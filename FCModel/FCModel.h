@@ -83,12 +83,14 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 // SELECTs
 // - "keyed" variants return dictionaries keyed by each instance's primary-key value.
 // - "FromResultSet" variants will iterate through the supplied result set, but the caller is still responsible for closing it.
+// - "countOf" variants return an NSNumber count, or nil on error.
 // - Optional query placeholders:
 //      $T  - This model's table name
 //      $PK - This model's primary-key field name
 //
 + (NSArray *)allInstances;
 + (NSDictionary *)keyedAllInstances;
++ (NSNumber *)countOfInstances;
 
 + (NSArray *)instancesFromResultSet:(FMResultSet *)rs;
 + (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs;
@@ -97,6 +99,7 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE, ...;
 + (NSArray *)instancesWhere:(NSString *)queryAfterWHERE, ...;
 + (NSDictionary *)keyedInstancesWhere:(NSString *)queryAfterWHERE, ...;
++ (NSNumber *)countOfInstancesWhere:(NSString *)queryAfterWHERE, ...;
 
 + (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY, ...;
 + (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY, ...;
