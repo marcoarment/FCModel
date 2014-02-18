@@ -79,6 +79,8 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 #pragma mark - For subclasses to override
 
++ (NSString *)tableName { return NSStringFromClass(self); }
+
 - (void)didInit { }
 - (BOOL)shouldInsert { return YES; }
 - (BOOL)shouldUpdate { return YES; }
@@ -467,6 +469,32 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     return dictionary;
 }
 
++ (NSUInteger)numberOfInstances
+{
+    NSNumber *value = [self firstValueFromQuery:@"SELECT COUNT(*) FROM $T"];
+    return value ? value.unsignedIntegerValue : 0;
+}
+
++ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE, ...
+{
+    __block NSUInteger count = 0;
+    va_list args;
+    va_list *foolTheStaticAnalyzer = &args;
+    va_start(args, queryAfterWHERE);
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE %@" stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+        if (! s) [self queryFailedInDatabase:db];
+        if ([s next]) {
+            NSNumber *value = [s objectForColumnIndex:0];
+            if (value) count = value.unsignedIntegerValue;
+        }
+        [s close];
+    }];
+    va_end(args);
+    
+    return count;
+}
+
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...
 {
     NSMutableArray *columnArray = [NSMutableArray array];
@@ -682,7 +710,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     NSArray *columnNames;
     NSMutableArray *values;
     
-    NSString *tableName = NSStringFromClass(self.class);
+    NSString *tableName = self.class.tableName;
     NSString *pkName = g_primaryKeyFieldName[self.class];
     id primaryKey = primaryKeySet ? [self encodedValueForFieldName:pkName] : nil;
     if (! primaryKey) {
@@ -827,7 +855,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 {
     if (self == FCModel.class) return query;
     query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
-    return [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
+    return [query stringByReplacingOccurrencesOfString:@"$T" withString:self.tableName];
 }
 
 - (NSString *)description
