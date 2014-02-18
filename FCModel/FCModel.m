@@ -97,6 +97,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 #pragma mark - For subclasses to override
 
++ (NSString *)tableName { return NSStringFromClass(self); }
+
 - (void)didInit { }
 - (BOOL)shouldInsert { return YES; }
 - (BOOL)shouldUpdate { return YES; }
@@ -544,38 +546,17 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
     va_start(args, queryAfterWHERE);
-    [g_databaseQueue readDatabase:^(FMDatabase *db) {
-        NSString *expandedQuery = [self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]];
-        if (expandedQuery) {
-            FMResultSet *s = [db executeQuery:expandedQuery withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
-            if (! s) [self queryFailedInDatabase:db];
-            if ([s next]) {
-                NSNumber *value = [s objectForColumnIndex:0];
-                if (value) count = value.unsignedIntegerValue;
-            }
-            [s close];
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE %@" stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+        if (! s) [self queryFailedInDatabase:db];
+        if ([s next]) {
+            NSNumber *value = [s objectForColumnIndex:0];
+            if (value) count = value.unsignedIntegerValue;
         }
+        [s close];
     }];
     va_end(args);
     
-    return count;
-}
-
-+ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)args
-{
-    __block NSUInteger count = 0;
-    [g_databaseQueue readDatabase:^(FMDatabase *db) {
-        NSString *expandedQuery = [self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]];
-        if (expandedQuery) {
-            FMResultSet *s = [db executeQuery:expandedQuery withArgumentsInArray:args orDictionary:nil orVAList:NULL];
-            if (! s) [self queryFailedInDatabase:db];
-            if ([s next]) {
-                NSNumber *value = [s objectForColumnIndex:0];
-                if (value) count = value.unsignedIntegerValue;
-            }
-            [s close];
-        }
-    }];
     return count;
 }
 
@@ -941,33 +922,17 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block NSSet *changedFields = nil;
     [g_databaseQueue writeDatabase:^(FMDatabase *db) {
     
-        NSDictionary *changes = self.unsavedChanges;
-        BOOL dirty = changes.count;
-        if (! dirty && existsInDatabase) { result = FCModelSaveNoChanges; return; }
-        
-        update = existsInDatabase;
-        NSArray *columnNames;
-        NSMutableArray *values;
-        
-        NSString *tableName = NSStringFromClass(self.class);
-        NSString *pkName = g_primaryKeyFieldName[self.class];
-        id primaryKey = [self encodedValueForFieldName:pkName];
-        NSAssert1(primaryKey, @"Cannot update %@ without primary key value", NSStringFromClass(self.class));
-       
-        if (update) {
-            if (! [self shouldUpdate]) {
-                [self saveWasRefused];
-                result = FCModelSaveRefused;
-                return;
-            }
-            columnNames = [changes allKeys];
-            changedFields = [NSSet setWithArray:columnNames];
-        } else {
-            if (! [self shouldInsert]) {
-                [self saveWasRefused];
-                result = FCModelSaveRefused;
-                return;
-            }
+    BOOL update = existsInDatabase;
+    NSArray *columnNames;
+    NSMutableArray *values;
+    
+    NSString *tableName = self.class.tableName;
+    NSString *pkName = g_primaryKeyFieldName[self.class];
+    id primaryKey = primaryKeySet ? [self encodedValueForFieldName:pkName] : nil;
+    if (! primaryKey) {
+        NSAssert1(! update, @"Cannot update %@ without primary key", NSStringFromClass(self.class));
+        primaryKey = [NSNull null];
+    }
 
             changedFields = [NSSet setWithArray:self.class.databaseFieldNames];
             NSMutableSet *columnNamesMinusPK = [[NSSet setWithArray:[g_fieldInfo[self.class] allKeys]] mutableCopy];
@@ -1140,7 +1105,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     if (!primaryKeyFieldName) return nil;
     
     query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:primaryKeyFieldName];
-    return [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
+    return [query stringByReplacingOccurrencesOfString:@"$T" withString:self.tableName];
 }
 
 - (NSString *)description

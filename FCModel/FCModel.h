@@ -138,6 +138,9 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE, ...;
 + (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
 
++ (NSUInteger)numberOfInstances;
++ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE, ...;
+
 // Fetch a set of primary keys, i.e. "WHERE key IN (...)"
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
 + (NSDictionary *)keyedInstancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
@@ -163,6 +166,7 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 
 // For subclasses to override, all optional:
 
++ (NSString *)tableName; // By default, the class name is used
 - (void)didInit;
 - (BOOL)shouldInsert;
 - (BOOL)shouldUpdate;
