@@ -2,7 +2,7 @@
 //  FCModel.h
 //
 //  Created by Marco Arment on 7/18/13.
-//  Copyright (c) 2013 Marco Arment. All rights reserved.
+//  Copyright (c) 2013-2014 Marco Arment. See included LICENSE file.
 //
 
 #import <Foundation/Foundation.h>
@@ -27,6 +27,23 @@ extern NSString * const FCModelInsertNotification;
 extern NSString * const FCModelUpdateNotification;
 extern NSString * const FCModelDeleteNotification;
 extern NSString * const FCModelInstanceSetKey;
+
+// Like the above with using the Class as the object, except that this one doesn't get a set of changed instances,
+//  fires on any insert, update, or delete, and also fires after calls to dataWasUpdatedExternally and executeUpdateQuery:.
+// If you find yourself subscribing to all three insert/update/delete notifications to do something like reload a tableview,
+//  this is probably what you want instead.
+//
+extern NSString * const FCModelAnyChangeNotification;
+
+
+// During dataWasUpdatedExternally and executeUpdateQuery:, this is called immediately before FCModel tells all loaded
+//  instances of the affected class to reload themselves. Reloading can be time-consuming if many instances are in memory,
+//  so this is a good time to release any unnecessarily retained instances so they don't need to go through the reload.
+//
+// (You probably don't need to care about this. Until you do.)
+//
+extern NSString * const FCModelWillReloadNotification;
+
 
 typedef NS_ENUM(NSInteger, FCModelSaveResult) {
     FCModelSaveFailed = 0, // SQLite refused a query. Check .lastSQLiteError
@@ -73,7 +90,7 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 
 // CRUD basics
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue; // will create if nonexistent
-+ (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create;
++ (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create; // will return nil if nonexistent
 - (FCModelSaveResult)revertUnsavedChanges;
 - (FCModelSaveResult)revertUnsavedChangeToFieldName:(NSString *)fieldName;
 - (FCModelSaveResult)delete;
@@ -96,6 +113,7 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 
 + (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE, ...;
 + (NSArray *)instancesWhere:(NSString *)queryAfterWHERE, ...;
++ (NSArray *)instancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)array;
 + (NSDictionary *)keyedInstancesWhere:(NSString *)queryAfterWHERE, ...;
 
 + (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY, ...;
@@ -113,6 +131,11 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...;
 + (id)firstValueFromQuery:(NSString *)query, ...;
 
+// This method uses a global query cache based on FCModelLiveResultArray. Results are cached indefinitely until
+//  their table has any writes or there's a system low-memory warning, at which point they automatically invalidate.
+// The next subsequent request will repopulate the cached data.
+//
++ (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
 
 // For subclasses to override, all optional:
 

@@ -2,12 +2,13 @@
 //  FCModel.m
 //
 //  Created by Marco Arment on 7/18/13.
-//  Copyright (c) 2013 Marco Arment. All rights reserved.
+//  Copyright (c) 2013-2014 Marco Arment. See included LICENSE file.
 //
 
 #import <objc/runtime.h>
 #import <string.h>
 #import "FCModel.h"
+#import "FCModelLiveResultArray.h"
 #import "FMDatabase.h"
 #import "FMDatabaseQueue.h"
 #import "FMDatabaseAdditions.h"
@@ -17,6 +18,9 @@ NSString * const FCModelInsertNotification = @"FCModelInsertNotification";
 NSString * const FCModelUpdateNotification = @"FCModelUpdateNotification";
 NSString * const FCModelDeleteNotification = @"FCModelDeleteNotification";
 NSString * const FCModelInstanceSetKey = @"FCModelInstanceSetKey";
+
+NSString * const FCModelAnyChangeNotification = @"FCModelAnyChangeNotification";
+NSString * const FCModelWillReloadNotification = @"FCModelWillReloadNotification";
 
 static NSString * const FCModelReloadNotification = @"FCModelReloadNotification";
 static NSString * const FCModelSaveNotification   = @"FCModelSaveNotification";
@@ -193,7 +197,9 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 + (void)dataWasUpdatedExternally
 {
+    [NSNotificationCenter.defaultCenter postNotificationName:FCModelWillReloadNotification object:nil userInfo:@{ FCModelClassKey : self }];
     [NSNotificationCenter.defaultCenter postNotificationName:FCModelReloadNotification object:nil userInfo:@{ FCModelClassKey : self }];
+    [NSNotificationCenter.defaultCenter postNotificationName:FCModelAnyChangeNotification object:nil userInfo:@{ FCModelClassKey : self }];
 }
 
 #pragma mark - Mapping properties to database fields
@@ -310,6 +316,11 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 #pragma mark - Find methods
 
++ (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments
+{
+    return [FCModelLiveResultArray arrayWithModelClass:self queryAfterWHERE:queryAfterWHERE arguments:arguments fromGlobalCache:YES].allObjects;
+}
+
 + (NSError *)executeUpdateQuery:(NSString *)query, ...
 {
     va_list args;
@@ -395,6 +406,11 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     NSArray *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
     va_end(args);
     return results;
+}
+
++ (NSArray *)instancesWhere:(NSString *)query arguments:(NSArray *)array;
+{
+    return [self _instancesWhere:query andArgs:NULL orArgsArray:array orResultSet:NULL onlyFirst:NO keyed:NO];
 }
 
 + (NSDictionary *)keyedInstancesWhere:(NSString *)query, ...
@@ -619,6 +635,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     if (deleted) {
         [self didDelete];
         [self postChangeNotification:FCModelDeleteNotification];
+        [self postChangeNotification:FCModelAnyChangeNotification];
     } else {
         __block BOOL didUpdate = NO;
         [resultDictionary enumerateKeysAndObjectsUsingBlock:^(NSString *fieldName, id fieldValue, BOOL *stop) {
@@ -645,6 +662,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         if (didUpdate) {
             [self didUpdate];
             [self postChangeNotification:FCModelUpdateNotification];
+            [self postChangeNotification:FCModelAnyChangeNotification];
         }
     }
 }
@@ -805,9 +823,11 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     if (update) {
         [self didUpdate];
         [self postChangeNotification:FCModelUpdateNotification];
+        [self postChangeNotification:FCModelAnyChangeNotification];
     } else {
         [self didInsert];
         [self postChangeNotification:FCModelInsertNotification];
+        [self postChangeNotification:FCModelAnyChangeNotification];
     }
     
     return FCModelSaveSucceeded;
@@ -837,6 +857,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     existsInDatabase = NO;
     [self didDelete];
     [self postChangeNotification:FCModelDeleteNotification];
+    [self postChangeNotification:FCModelAnyChangeNotification];
     [self removeUniqueInstance];
     
     return FCModelSaveSucceeded;
