@@ -57,9 +57,6 @@
     if (! cachedLiveArray) {
         cachedLiveArray = [FCModelLiveResultArray arrayWithModelClass:fcModelClass queryAfterWHERE:query arguments:arguments fromGlobalCache:NO];
         [queryCache setObject:cachedLiveArray forKey:(arguments ?: @"")];
-        NSLog(@"[QCache] miss %@:{%@} [%@]", NSStringFromClass(fcModelClass), query, [arguments componentsJoinedByString:@","]);
-    } else {
-        NSLog(@"[QCache] +HIT %@:{%@} [%@]", NSStringFromClass(fcModelClass), query, [arguments componentsJoinedByString:@","]);
     }
     
     return cachedLiveArray;
