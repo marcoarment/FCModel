@@ -8,7 +8,7 @@
 #import <objc/runtime.h>
 #import <string.h>
 #import "FCModel.h"
-#import "FCModelLiveResultArray.h"
+#import "FCModelCachedObject.h"
 #import "FMDatabase.h"
 #import "FMDatabaseQueue.h"
 #import "FMDatabaseAdditions.h"
@@ -318,7 +318,12 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 + (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments
 {
-    return [FCModelLiveResultArray arrayWithModelClass:self queryAfterWHERE:queryAfterWHERE arguments:arguments fromGlobalCache:YES].allObjects;
+    return [FCModelLiveResultArray arrayWithModelClass:self queryAfterWHERE:queryAfterWHERE arguments:arguments].allObjects;
+}
+
++ (id)cachedObjectWithIdentifier:(id)identifier generator:(id (^)(void))generatorBlock
+{
+    return [FCModelCachedObject objectWithModelClass:self cacheIdentifier:identifier generator:generatorBlock].value;
 }
 
 + (NSError *)executeUpdateQuery:(NSString *)query, ...

@@ -1,11 +1,21 @@
 //
-//  FCModelLiveResultArray.h
+//  FCModelCachedObject.h
 //
 //  Created by Marco Arment on 3/1/14.
 //  Copyright (c) 2014 Marco Arment. See included LICENSE file.
 //
 
 #import <Foundation/Foundation.h>
+
+@interface FCModelCachedObject : NSObject
+
++ (instancetype)objectWithModelClass:(Class)fcModelClass cacheIdentifier:(id)identifier generator:(id (^)(void))generatorBlock;
+@property (readonly) id value;
+
++ (void)clearCache;
+
+@end
+
 
 // This class is an implementation detail of FCModel's cachedInstancesWhere:arguments: and cachedAllInstances methods.
 //
@@ -16,9 +26,7 @@
 
 @interface FCModelLiveResultArray : NSObject
 
-+ (instancetype)arrayWithModelClass:(Class)fcModelClass queryAfterWHERE:(NSString *)query arguments:(NSArray *)arguments fromGlobalCache:(BOOL)cache;
-+ (void)clearGlobalCache;
-
++ (instancetype)arrayWithModelClass:(Class)fcModelClass queryAfterWHERE:(NSString *)query arguments:(NSArray *)arguments;
 - (NSArray *)allObjects;
 
 @end
