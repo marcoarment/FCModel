@@ -49,9 +49,10 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 };
 
 @interface FCFieldInfo : NSObject
-@property (nonatomic, assign) BOOL nullAllowed;
-@property (nonatomic, assign) FCFieldType type;
+@property (nonatomic) BOOL nullAllowed;
+@property (nonatomic) FCFieldType type;
 @property (nonatomic) id defaultValue;
+@property (nonatomic) Class propertyClass;
 @end
 @implementation FCFieldInfo
 - (NSString *)description
@@ -260,19 +261,17 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 - (id)unserializedRepresentationOfDatabaseValue:(id)databaseValue forPropertyNamed:(NSString *)propertyName
 {
-    objc_property_t property = class_getProperty(self.class, propertyName.UTF8String);
-    if (property) {
-        const char *attrs = property_getAttributes(property);
-        if (attrs[0] == 'T' && attrs[1] == '@' && attrs[2] == '"') attrs = &(attrs[3]);
-
-        if (databaseValue && strncmp(attrs, "NSURL", 5) == 0) {
+    Class propertyClass = [g_fieldInfo[self.class][propertyName] propertyClass];
+    
+    if (propertyClass && databaseValue) {
+        if (propertyClass == NSURL.class) {
             return [NSURL URLWithString:databaseValue];
-        } else if (databaseValue && strncmp(attrs, "NSDate", 6) == 0) {
+        } else if (propertyClass == NSDate.class) {
             return [NSDate dateWithTimeIntervalSince1970:[databaseValue integerValue]];
-        } else if (databaseValue && strncmp(attrs, "NSDictionary", 12) == 0) {
+        } else if (propertyClass == NSDictionary.class) {
             NSDictionary *dict = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
             return dict && [dict isKindOfClass:NSDictionary.class] ? dict : @{};
-        } else if (databaseValue && strncmp(attrs, "NSArray", 7) == 0) {
+        } else if (propertyClass == NSArray.class) {
             NSArray *array = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
             return array && [array isKindOfClass:NSArray.class] ? array : @[];
         }
@@ -961,9 +960,19 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
                     continue;
                 }
                 
-                if ([[[NSString stringWithCString:property_getAttributes(property) encoding:NSASCIIStringEncoding] componentsSeparatedByString:@","] containsObject:@"R"]) {
+                NSArray *propertyAttributes = [[NSString stringWithCString:property_getAttributes(property) encoding:NSASCIIStringEncoding]componentsSeparatedByString:@","];
+                if ([propertyAttributes containsObject:@"R"]) {
                     NSLog(@"[FCModel] ignoring column %@.%@, matching model property is readonly", tableName, fieldName);
                     continue;
+                }
+                
+                Class propertyClass;
+                NSString *propertyClassName, *typeString = propertyAttributes.firstObject;
+                if (typeString &&
+                    [typeString hasPrefix:@"T@\""] && [typeString hasSuffix:@"\""] && typeString.length > 4 &&
+                    (propertyClassName = [typeString substringWithRange:NSMakeRange(3, typeString.length - 4)])
+                ) {
+                    propertyClass = NSClassFromString(propertyClassName);
                 }
                 
                 int isPK = [columnsRS intForColumnIndex:5];
@@ -972,6 +981,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
                 NSString *fieldType = [columnsRS stringForColumnIndex:2];
                 FCFieldInfo *info = [FCFieldInfo new];
+                info.propertyClass = propertyClass;
                 info.nullAllowed = ! [columnsRS boolForColumnIndex:3];
                 
                 // Type-parsing algorithm from SQLite's column-affinity rules: http://www.sqlite.org/datatype3.html
