@@ -591,7 +591,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         }];
 
         [fieldValues enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
-            [self decodeFieldValue:obj intoPropertyName:key];
+            if (g_fieldInfo[self.class][key]) [self decodeFieldValue:obj intoPropertyName:key];
         }];
         
         primaryKeyLocked = YES;
@@ -954,8 +954,15 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
             FMResultSet *columnsRS = [db executeQuery:[NSString stringWithFormat: @"PRAGMA table_info('%@')", tableName]];
             while ([columnsRS next]) {
                 NSString *fieldName = [columnsRS stringForColumnIndex:1];
-                if (NULL == class_getProperty(tableModelClass, [fieldName UTF8String])) {
+                
+                objc_property_t property = class_getProperty(tableModelClass, fieldName.UTF8String);
+                if (! property) {
                     NSLog(@"[FCModel] ignoring column %@.%@, no matching model property", tableName, fieldName);
+                    continue;
+                }
+                
+                if ([[[NSString stringWithCString:property_getAttributes(property) encoding:NSASCIIStringEncoding] componentsSeparatedByString:@","] containsObject:@"R"]) {
+                    NSLog(@"[FCModel] ignoring column %@.%@, matching model property is readonly", tableName, fieldName);
                     continue;
                 }
                 
