@@ -32,7 +32,9 @@
 {
     if ( (self = [super init]) ) {
         self.cache = [[NSCache alloc] init];
+#if TARGET_OS_IPHONE
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(clear:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+#endif
     }
     return self;
 }
@@ -91,7 +93,9 @@
     [NSNotificationCenter.defaultCenter addObserver:set selector:@selector(tableChanged:) name:FCModelWillReloadNotification object:fcModelClass];
     [NSNotificationCenter.defaultCenter addObserver:set selector:@selector(tableChanged:) name:FCModelAnyChangeNotification object:FCModel.class];
     [NSNotificationCenter.defaultCenter addObserver:set selector:@selector(tableChanged:) name:FCModelAnyChangeNotification object:fcModelClass];
+#if TARGET_OS_IPHONE
     [NSNotificationCenter.defaultCenter addObserver:set selector:@selector(tableChanged:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+#endif
     
     return set;
 }
@@ -102,7 +106,9 @@
     [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelWillReloadNotification object:_modelClass];
     [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelAnyChangeNotification object:FCModel.class];
     [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelAnyChangeNotification object:_modelClass];
+#if TARGET_OS_IPHONE
     [NSNotificationCenter.defaultCenter removeObserver:self name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+#endif
 }
 
 - (void)tableChanged:(NSNotification *)n
