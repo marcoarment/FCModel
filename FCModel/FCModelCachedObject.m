@@ -36,10 +36,19 @@
 {
     if ( (self = [super init]) ) {
         self.cache = [[NSCache alloc] init];
+#if TARGET_OS_IPHONE
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(clear:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+#endif
     }
     return self;
 }
+
+#if TARGET_OS_IPHONE
+- (void)dealloc
+{
+    [NSNotificationCenter.defaultCenter removeObserver:self name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+}
+#endif
 
 - (void)clear:(id)sender { [self.cache removeAllObjects]; }
 
@@ -95,8 +104,11 @@
         [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(flush:) name:FCModelWillReloadNotification object:fcModelClass];
         [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(flush:) name:FCModelAnyChangeNotification object:FCModel.class];
         [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(flush:) name:FCModelAnyChangeNotification object:fcModelClass];
+
+#if TARGET_OS_IPHONE
         [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(flush:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
-        
+#endif
+
         [FCModelGeneratedObjectCache.sharedInstance saveObject:obj class:fcModelClass identifier:identifier];
     }
     return obj;
@@ -108,7 +120,10 @@
     [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelWillReloadNotification object:_modelClass];
     [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelAnyChangeNotification object:FCModel.class];
     [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelAnyChangeNotification object:_modelClass];
+
+#if TARGET_OS_IPHONE
     [NSNotificationCenter.defaultCenter removeObserver:self name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+#endif
 }
 
 - (void)flush:(NSNotification *)n
