@@ -213,10 +213,10 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
     if ( (oldValue = change[NSKeyValueChangeOldKey]) && (newValue = change[NSKeyValueChangeNewKey]) ) {
         if ([oldValue isKindOfClass:[NSURL class]]) oldValue = ((NSURL *)oldValue).absoluteString;
-        else if ([oldValue isKindOfClass:[NSDate class]]) oldValue = [NSNumber numberWithInteger:[(NSDate *)oldValue timeIntervalSince1970]];
+        else if ([oldValue isKindOfClass:[NSDate class]]) oldValue = [NSNumber numberWithLongLong:[(NSDate *)oldValue timeIntervalSince1970]];
 
         if ([newValue isKindOfClass:[NSURL class]]) newValue = ((NSURL *)newValue).absoluteString;
-        else if ([newValue isKindOfClass:[NSDate class]]) newValue = [NSNumber numberWithInteger:[(NSDate *)newValue timeIntervalSince1970]];
+        else if ([newValue isKindOfClass:[NSDate class]]) newValue = [NSNumber numberWithLongLong:[(NSDate *)newValue timeIntervalSince1970]];
 
         if ([oldValue isEqual:newValue]) return;
     }
@@ -247,7 +247,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     } else if ([instanceValue isKindOfClass:NSURL.class]) {
         return [(NSURL *)instanceValue absoluteString];
     } else if ([instanceValue isKindOfClass:NSDate.class]) {
-        return [NSNumber numberWithInteger:[(NSDate *)instanceValue timeIntervalSince1970]];
+        return [NSNumber numberWithLongLong:[(NSDate *)instanceValue timeIntervalSince1970]];
     }
 
     return instanceValue;
@@ -267,7 +267,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         if (propertyClass == NSURL.class) {
             return [NSURL URLWithString:databaseValue];
         } else if (propertyClass == NSDate.class) {
-            return [NSDate dateWithTimeIntervalSince1970:[databaseValue integerValue]];
+            return [NSDate dateWithTimeIntervalSince1970:[databaseValue longLongValue]];
         } else if (propertyClass == NSDictionary.class) {
             NSDictionary *dict = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
             return dict && [dict isKindOfClass:NSDictionary.class] ? dict : @{};
