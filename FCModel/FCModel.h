@@ -9,10 +9,8 @@
 
 #ifdef COCOAPODS
 #import <FMDB/FMDatabase.h>
-#import <FMDB/FMDatabaseQueue.h>
 #else
 #import "FMDatabase.h"
-#import "FMDatabaseQueue.h"
 #endif
 
 // These notifications use the relevant model's Class as the "object" for convenience so observers can,
@@ -72,11 +70,13 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 //  if you perform SELECTs from multiple threads.
 + (NSArray *)allLoadedInstances;
 
-// Feel free to operate on the same database queue with your own queries (IMPORTANT: READ THE NEXT METHOD DEFINITION)
-+ (FMDatabaseQueue *)databaseQueue;
+// Feel free to operate on the same database object with your own queries. They'll be
+//  executed synchronously on FCModel's private database-operation queue.
+//  (IMPORTANT: READ THE NEXT METHOD DEFINITION)
++ (void)inDatabaseSync:(void (^)(FMDatabase *db))block;
 
-// Call if you perform INSERT/UPDATE/DELETE outside of the instance*/save methods.
-// This will cause any instances in existence to reload their data from the database.
+// Call if you perform INSERT/UPDATE/DELETE on any FCModel table outside of the instance*/save
+// methods. This will cause any instances in existence to reload their data from the database.
 //
 //  - Call on a subclass to reload all instances of that model and any subclasses.
 //  - Call on FCModel to reload all instances of ALL models.

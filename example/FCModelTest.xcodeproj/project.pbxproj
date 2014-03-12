@@ -14,6 +14,8 @@
 		9230D70517F32EF1000C9C87 /* FCModelTest_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9230D70417F32EF1000C9C87 /* FCModelTest_Tests.m */; };
 		9230D70E17F332F5000C9C87 /* SimpleModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 9230D70D17F332F5000C9C87 /* SimpleModel.m */; };
 		9250891417F3751400BFE66E /* FCModel+Testing.m in Sources */ = {isa = PBXBuildFile; fileRef = 9250891317F3751400BFE66E /* FCModel+Testing.m */; };
+		A924EA3118D0EC94000C28BD /* FCModelCachedObject.m in Sources */ = {isa = PBXBuildFile; fileRef = A924EA2E18D0EC94000C28BD /* FCModelCachedObject.m */; };
+		A924EA3218D0EC94000C28BD /* FCModelDatabaseQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = A924EA3018D0EC94000C28BD /* FCModelDatabaseQueue.m */; };
 		A99B9B2218B316DC00D79C6A /* FMDatabaseAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = A99B9B2118B316DC00D79C6A /* FMDatabaseAdditions.m */; };
 		A9EEFAC317E4C8EE0066C5EA /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC217E4C8EE0066C5EA /* Foundation.framework */; };
 		A9EEFAC517E4C8EE0066C5EA /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC417E4C8EE0066C5EA /* CoreGraphics.framework */; };
@@ -59,6 +61,10 @@
 		9230D70D17F332F5000C9C87 /* SimpleModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SimpleModel.m; sourceTree = "<group>"; };
 		9250891217F3751400BFE66E /* FCModel+Testing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "FCModel+Testing.h"; sourceTree = "<group>"; };
 		9250891317F3751400BFE66E /* FCModel+Testing.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "FCModel+Testing.m"; sourceTree = "<group>"; };
+		A924EA2D18D0EC94000C28BD /* FCModelCachedObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelCachedObject.h; sourceTree = "<group>"; };
+		A924EA2E18D0EC94000C28BD /* FCModelCachedObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelCachedObject.m; sourceTree = "<group>"; };
+		A924EA2F18D0EC94000C28BD /* FCModelDatabaseQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelDatabaseQueue.h; sourceTree = "<group>"; };
+		A924EA3018D0EC94000C28BD /* FCModelDatabaseQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelDatabaseQueue.m; sourceTree = "<group>"; };
 		A99B9B2018B316DC00D79C6A /* FMDatabaseAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FMDatabaseAdditions.h; sourceTree = "<group>"; };
 		A99B9B2118B316DC00D79C6A /* FMDatabaseAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FMDatabaseAdditions.m; sourceTree = "<group>"; };
 		A9EEFABF17E4C8EE0066C5EA /* FCModelTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FCModelTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -217,6 +223,10 @@
 			children = (
 				A9EEFAFB17E4CB300066C5EA /* FCModel.h */,
 				A9EEFAFC17E4CB300066C5EA /* FCModel.m */,
+				A924EA2D18D0EC94000C28BD /* FCModelCachedObject.h */,
+				A924EA2E18D0EC94000C28BD /* FCModelCachedObject.m */,
+				A924EA2F18D0EC94000C28BD /* FCModelDatabaseQueue.h */,
+				A924EA3018D0EC94000C28BD /* FCModelDatabaseQueue.m */,
 			);
 			name = FCModel;
 			path = ../../FCModel;
@@ -361,6 +371,8 @@
 				A9EEFB2817E6AF970066C5EA /* Color.m in Sources */,
 				A9EEFB2C17E6BCF80066C5EA /* FMDatabasePool.m in Sources */,
 				A9EEFB2117E4E39A0066C5EA /* RandomThings.m in Sources */,
+				A924EA3118D0EC94000C28BD /* FCModelCachedObject.m in Sources */,
+				A924EA3218D0EC94000C28BD /* FCModelDatabaseQueue.m in Sources */,
 				A9EEFADC17E4C8EE0066C5EA /* ViewController.m in Sources */,
 				A9EEFAD317E4C8EE0066C5EA /* AppDelegate.m in Sources */,
 				A9EEFB0D17E4CB870066C5EA /* FMDatabase.m in Sources */,
