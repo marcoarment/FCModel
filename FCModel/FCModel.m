@@ -502,7 +502,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     va_list *foolTheStaticAnalyzer = &args;
     va_start(args, queryAfterWHERE);
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE %@" stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
         if (! s) [self queryFailedInDatabase:db];
         if ([s next]) {
             NSNumber *value = [s objectForColumnIndex:0];
