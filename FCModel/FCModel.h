@@ -153,6 +153,18 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 - (void)saveWasRefused;
 - (void)saveDidFail;
 
+// To create new records with supplied primary-key values, call instanceWithPrimaryKey:, then save when done
+//  setting other fields.
+//
+// This method is only called if you call +new to create a new instance with an automatic primary-key value.
+//
+// By default, this method generates random int64_t values. Subclasses may override it to e.g. use UUID strings
+//  or other values, but the values must be unique within the table. If you return something that already exists
+//  in the table or in an unsaved in-memory instance, FCModel will keep calling this up to 100 times looking for
+//  a unique value before raising an exception.
+//
++ (id)primaryKeyValueForNewInstance;
+
 // A bit redundant with KVO, but friendlier to multi-level subclassing, and only called for
 //  meaningful changes (not setting to same value, or initially loading from the database)
 //  on non-primary-key database columns.
