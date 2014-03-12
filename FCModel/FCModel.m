@@ -637,7 +637,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
                     } while (conflict);
                     
                 } else if (info.defaultValue) {
-                    [self setValue:info.defaultValue forKey:key];
+                    [self decodeFieldValue:info.defaultValue intoPropertyName:key];
                 }
             }
 
