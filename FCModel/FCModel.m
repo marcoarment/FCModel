@@ -30,6 +30,7 @@ static NSString * const FCModelClassKey           = @"class";
 static FCModelDatabaseQueue *g_databaseQueue = NULL;
 static NSDictionary *g_fieldInfo = NULL;
 static NSDictionary *g_primaryKeyFieldName = NULL;
+static NSSet *g_tablesUsingAutoIncrementEmulation = NULL;
 static NSMutableDictionary *g_instances = NULL;
 static dispatch_semaphore_t g_instancesReadLock;
 static NSMutableDictionary *g_enqueuedBatchNotifications = NULL;
@@ -564,6 +565,24 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 + (id)primaryKeyValueForNewInstance
 {
+    // Emulation for old AUTOINCREMENT tables
+    if (g_tablesUsingAutoIncrementEmulation && [g_tablesUsingAutoIncrementEmulation containsObject:NSStringFromClass(self)]) {
+        id largestNumber = [self firstValueFromQuery:@"SELECT MAX($PK) FROM $T"];
+        int64_t largestExistingValue = largestNumber && largestNumber != NSNull.null ? ((NSNumber *) largestNumber).longLongValue : 0;
+
+        dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
+        NSMapTable *classCache = g_instances[self];
+        NSArray *instances = classCache ? [classCache.objectEnumerator.allObjects copy] : [NSArray array];
+        for (FCModel *instance in instances) {
+            largestExistingValue = MAX(largestExistingValue, ((NSNumber *)instance.primaryKey).longLongValue);
+        }
+        dispatch_semaphore_signal(g_instancesReadLock);
+        
+        largestExistingValue++;
+        return @(largestExistingValue);
+    }
+
+    // Otherwise, issue random 64-bit signed ints
     uint64_t urandom;
     if (0 != SecRandomCopyBytes(kSecRandomDefault, sizeof(uint64_t), (uint8_t *) (&urandom))) {
         arc4random_stir();
@@ -945,6 +964,16 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         if (newSchemaVersion != startingSchemaVersion) {
             [db executeUpdate:[NSString stringWithFormat:@"PRAGMA user_version = %d", newSchemaVersion]];
         }
+        
+        // Scan for legacy AUTOINCREMENT usage
+        NSMutableSet *autoincTables = [NSMutableSet set];
+        FMResultSet *autoincRS = [db executeQuery:@"SELECT name FROM sqlite_master WHERE UPPER(sql) LIKE '%AUTOINCREMENT%'"];
+        while ([autoincRS next]) {
+            [autoincTables addObject:[autoincRS stringForColumnIndex:0]];
+            NSLog(@"[FCModel] Warning: database table %@ uses AUTOINCREMENT, which FCModel no longer supports. Its behavior will be approximated.", [autoincRS stringForColumnIndex:0]);
+        }
+        [autoincRS close];
+        if (autoincTables.count) g_tablesUsingAutoIncrementEmulation = [autoincTables copy];
         
         // Read schema for field names and primary keys
         FMResultSet *tablesRS = [db executeQuery:
