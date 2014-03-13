@@ -390,6 +390,73 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     return onlyFirst ? instance : (keyed ? keyedInstances : instances);
 }
 
+
++ (id)_instances:(NSString *)query andArgs:(va_list)args orArgsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed distinct:(BOOL)distinct
+{
+    NSMutableArray *instances;
+    NSMutableDictionary *keyedInstances;
+    __block FCModel *instance = nil;
+    
+    if (! onlyFirst) {
+        if (keyed) keyedInstances = [NSMutableDictionary dictionary];
+        else instances = [NSMutableArray array];
+    }
+    
+    void (^processResult)(FMResultSet *, BOOL *) = ^(FMResultSet *s, BOOL *stop){
+        NSDictionary *rowDictionary = s.resultDictionary;
+        instance = [self instanceWithPrimaryKey:rowDictionary[g_primaryKeyFieldName[self]] databaseRowValues:rowDictionary createIfNonexistent:NO];
+        if (onlyFirst) {
+            *stop = YES;
+            return;
+        }
+        if (keyed) [keyedInstances setValue:instance forKey:[instance primaryKey]];
+        else [instances addObject:instance];
+    };
+    
+    if (existingResultSet) {
+        BOOL stop = NO;
+        while (! stop && [existingResultSet next]) processResult(existingResultSet, &stop);
+    } else {
+        [g_databaseQueue inDatabase:^(FMDatabase *db) {
+            NSString *selectStatement = @"";
+            
+            if([[self databaseFieldNames] count]>0)
+            {
+                for(NSString *column in [self databaseFieldNames])
+                {
+                    selectStatement = [selectStatement stringByAppendingFormat:@"%@.\"%@\", ", [self.class tableName], column];
+                }
+                //Remove ,
+                selectStatement = [selectStatement substringToIndex:([selectStatement length]-2)];
+            }
+            
+            NSString *distinctSQL = @"";
+            
+            if(distinct)
+            {
+                distinctSQL = @"DISTINCT ";
+            }
+            
+            FMResultSet *s = [db
+                              executeQuery:(
+                                            query ?
+                                            [self expandQuery:[NSString stringWithFormat:@"SELECT %@%@ FROM \"$T\" %@", distinctSQL, selectStatement, query]] :
+                                            [self expandQuery:@"SELECT * FROM \"$T\""]
+                                            )
+                              withArgumentsInArray:argsArray
+                              orDictionary:nil
+                              orVAList:args
+                              ];
+            if (! s) [self queryFailedInDatabase:db];
+            BOOL stop = NO;
+            while (! stop && [s next]) processResult(s, &stop);
+            [s close];
+        }];
+    }
+    
+    return onlyFirst ? instance : (keyed ? keyedInstances : instances);
+}
+
 + (NSArray *)instancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:NO]; }
 + (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:YES]; }
 + (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:YES keyed:NO]; }
@@ -444,25 +511,55 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     return result;
 }
 
++ (NSArray *)instancesJoin:(NSString *)queryAfterSELECT, ...
+{
+    va_list args;
+    va_start(args, queryAfterSELECT);
+    id result = [self _instances:queryAfterSELECT andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO distinct:NO];
+    va_end(args);
+    return result;
+}
+
++ (NSArray *)instancesJoinDistinct:(NSString *)queryAfterSELECT, ...
+{
+    va_list args;
+    va_start(args, queryAfterSELECT);
+    id result = [self _instances:queryAfterSELECT andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO distinct:YES];
+    va_end(args);
+    return result;
+}
+
 + (NSArray *)allInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO]; }
 + (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES]; }
 
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
 {
+    return [self instancesWithColumnNameValues:primaryKeyValues columName:g_primaryKeyFieldName[self]];
+}
+
++ (NSArray *)instancesWithColumnNameValues:(NSArray *)primaryKeyValues columName:(NSString*)columName
+{
     if (primaryKeyValues.count == 0) return @[];
+    
+    //Lets check that columnName exists in this model otherwise someone could be naughtily doing an SQL Injection
+    if([[self.class databaseFieldNames] containsObject:columName] == NO)
+    {
+        [[NSException exceptionWithName:NSInvalidArgumentException reason:[NSString stringWithFormat:@"Column (%@) doesn't exist in this model (%@)", columName, [self.class tableName]] userInfo:nil] raise];
+    }
     
     __block int maxParameterCount = 0;
     [self.databaseQueue inDatabase:^(FMDatabase *db) {
         maxParameterCount = sqlite3_limit(db.sqliteHandle, SQLITE_LIMIT_VARIABLE_NUMBER, -1);
     }];
-
+    
     __block NSArray *allFoundInstances = nil;
     NSMutableArray *valuesArray = [NSMutableArray arrayWithCapacity:MIN(primaryKeyValues.count, maxParameterCount)];
-    NSMutableString *whereClause = [NSMutableString stringWithFormat:@"%@ IN (", g_primaryKeyFieldName[self]];
+    NSMutableString *whereClause = [NSMutableString stringWithFormat:@"%@ IN (", columName];
     
     void (^fetchChunk)() = ^{
         if (valuesArray.count == 0) return;
         [whereClause appendString:@")"];
+        
         NSArray *newInstancesThisChunk = [self _instancesWhere:whereClause andArgs:NULL orArgsArray:valuesArray orResultSet:nil onlyFirst:NO keyed:NO];
         allFoundInstances = allFoundInstances ? [allFoundInstances arrayByAddingObjectsFromArray:newInstancesThisChunk] : newInstancesThisChunk;
         
