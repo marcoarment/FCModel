@@ -603,7 +603,9 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(saveByNotification:) name:FCModelSaveNotification object:nil];
         existsInDatabase = existsInDB;
         deleted = NO;
-
+        
+        [self.class uniqueMapInit];
+        
         [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL *stop) {
             FCFieldInfo *info = (FCFieldInfo *)obj;
             
