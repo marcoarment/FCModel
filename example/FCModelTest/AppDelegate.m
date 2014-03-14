@@ -70,6 +70,12 @@
         [db commit];
     }];
     
+    [FCModel inDatabaseSync:^(FMDatabase *db) {
+        [FCModel inDatabaseSync:^(FMDatabase *db) {
+            
+        }];
+    }];
+    
 
     Color *testUniqueRed0 = [Color instanceWithPrimaryKey:@"red"];
 
