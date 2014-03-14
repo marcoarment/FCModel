@@ -9,10 +9,8 @@
 
 #ifdef COCOAPODS
 #import <FMDB/FMDatabase.h>
-#import <FMDB/FMDatabaseQueue.h>
 #else
 #import "FMDatabase.h"
-#import "FMDatabaseQueue.h"
 #endif
 
 // These notifications use the relevant model's Class as the "object" for convenience so observers can,
@@ -72,11 +70,13 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 //  if you perform SELECTs from multiple threads.
 + (NSArray *)allLoadedInstances;
 
-// Feel free to operate on the same database queue with your own queries (IMPORTANT: READ THE NEXT METHOD DEFINITION)
-+ (FMDatabaseQueue *)databaseQueue;
+// Feel free to operate on the same database object with your own queries. They'll be
+//  executed synchronously on FCModel's private database-operation queue.
+//  (IMPORTANT: READ THE NEXT METHOD DEFINITION)
++ (void)inDatabaseSync:(void (^)(FMDatabase *db))block;
 
-// Call if you perform INSERT/UPDATE/DELETE outside of the instance*/save methods.
-// This will cause any instances in existence to reload their data from the database.
+// Call if you perform INSERT/UPDATE/DELETE on any FCModel table outside of the instance*/save
+// methods. This will cause any instances in existence to reload their data from the database.
 //
 //  - Call on a subclass to reload all instances of that model and any subclasses.
 //  - Call on FCModel to reload all instances of ALL models.
@@ -152,6 +152,18 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 - (void)didDelete;
 - (void)saveWasRefused;
 - (void)saveDidFail;
+
+// To create new records with supplied primary-key values, call instanceWithPrimaryKey:, then save when done
+//  setting other fields.
+//
+// This method is only called if you call +new to create a new instance with an automatic primary-key value.
+//
+// By default, this method generates random int64_t values. Subclasses may override it to e.g. use UUID strings
+//  or other values, but the values must be unique within the table. If you return something that already exists
+//  in the table or in an unsaved in-memory instance, FCModel will keep calling this up to 100 times looking for
+//  a unique value before raising an exception.
+//
++ (id)primaryKeyValueForNewInstance;
 
 // A bit redundant with KVO, but friendlier to multi-level subclassing, and only called for
 //  meaningful changes (not setting to same value, or initially loading from the database)
