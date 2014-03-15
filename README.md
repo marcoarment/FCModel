@@ -13,8 +13,6 @@ FCModel accomplishes a lot of what [Brent Simmons wrote about](http://www.objc.i
 
 This is a __beta.__ I'm building [an app](http://overcast.fm/) around it, a few others are using it and making contributions, and it's stable for us so far. But changes are still relatively frequent, and the API may still change in minor but backward-incompatible ways.
 
-__NOTE: I've proposed [removing AUTOINCREMENT support](https://github.com/marcoarment/FCModel/issues/33). Please join the discussion.__
-
 ## Requirements
 
 * Xcode 5 or later
@@ -33,7 +31,7 @@ SQLite tables are associated with FCModel subclasses of the same name, and datab
 
 ```SQL
 CREATE TABLE Person (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    id           INTEGER PRIMARY KEY,
     name         TEXT NOT NULL DEFAULT '',
     createdTime  INTEGER NOT NULL
 );
@@ -41,7 +39,7 @@ CREATE TABLE Person (
 CREATE INDEX IF NOT EXISTS name ON Person (name);
 ```
 
-A single-column primary key is required. It can be an integer or a string, and `AUTOINCREMENT` is optional. You're responsible for creating your own indexes.
+A single-column primary key is required. It can be an integer or a string. If you don't specify a key value upon object creation, FCModel will generate a random 64-bit signed integer key that's unique within the table. You're responsible for creating your own table indexes.
 
 This table's model would look like this:
 
@@ -111,7 +109,7 @@ NSString *dbPath = [documentsPath stringByAppendingPathComponent:@"testDB.sqlite
     if (*schemaVersion < 1) {
         if (! [db executeUpdate:
             @"CREATE TABLE Person ("
-            @"    id           INTEGER PRIMARY KEY AUTOINCREMENT,"
+            @"    id           INTEGER PRIMARY KEY,"
             @"    name         TEXT NOT NULL DEFAULT '',"
             @"    createdTime  INTEGER NOT NULL"
             @");"
@@ -148,9 +146,9 @@ Once you've shipped a version to customers, never change its construction in you
 Creating new instances (INSERTs):
 
 ```obj-c
-// If using AUTOINCREMENT:
-Person *bob = [Person new]; // .id will be set after save
-// If not:
+// If you want a random 64-bit signed integer primary key value for .id:
+Person *bob = [Person new];
+// If you want to specify your own .id value:
 Person *bob = [Person instanceWithPrimaryKey:@(123)];
 bob.name = @"Bob";
 bob.createdTime = [NSDate date];
