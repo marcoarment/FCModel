@@ -33,4 +33,15 @@
     self.colorName = color.name;
 }
 
+- (Culture *)culture
+{
+    return [Culture instanceWithPrimaryKey:self.cultureCode];
+}
+
+- (void)setCulture:(Culture *)culture
+{
+    self.cultureCode = culture.cultureCode;
+}
+
+
 @end

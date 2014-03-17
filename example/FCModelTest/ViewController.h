@@ -11,5 +11,9 @@
 @interface ViewController : UIViewController <UICollectionViewDataSource, UICollectionViewDelegate, UITextFieldDelegate>
 @property (nonatomic) IBOutlet UICollectionView *collectionView;
 @property (nonatomic) IBOutlet UITextField *queryField;
+@property (nonatomic) IBOutlet UISegmentedControl *cultureControl;
+
+
+-(IBAction)cultureControlTapped:(id)sender;
 
 @end

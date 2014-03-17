@@ -10,6 +10,7 @@
 #import "ViewController.h"
 #import "FCModel.h"
 #import "Person.h"
+#import "Culture.h"
 #import "RandomThings.h"
 
 @implementation AppDelegate
@@ -33,27 +34,32 @@
             [db rollback];
             NSAssert3(0, @"Migration statement %d failed, code %d: %@", statement, lastErrorCode, lastErrorMessage);
         };
-
+        
+        //Example of table creation in a class
+        [Culture createTable:db failBlock:failedAt version:schemaVersion];
+        
         if (*schemaVersion < 1) {
             if (! [db executeUpdate:
                 @"CREATE TABLE Person ("
                 @"    id           INTEGER PRIMARY KEY AUTOINCREMENT," // Autoincrement is optional. Just demonstrating that it works.
                 @"    name         TEXT NOT NULL DEFAULT '',"
+                @"    cultureCode  TEXT NOT NULL DEFAULT 'en',"
                 @"    colorName    TEXT NOT NULL,"
                 @"    taps         INTEGER NOT NULL DEFAULT 0,"
                 @"    createdTime  INTEGER NOT NULL,"
                 @"    modifiedTime INTEGER NOT NULL"
                 @");"
             ]) failedAt(1);
+            
             if (! [db executeUpdate:@"CREATE UNIQUE INDEX IF NOT EXISTS name ON Person (name);"]) failedAt(2);
-
+            
             if (! [db executeUpdate:
                 @"CREATE TABLE Color ("
                 @"    name         TEXT NOT NULL PRIMARY KEY,"
                 @"    hex          TEXT NOT NULL"
                 @");"
             ]) failedAt(3);
-
+            
             // Create any other tables...
             
             *schemaVersion = 1;
@@ -76,9 +82,18 @@
         }];
     }];
     
+    Culture *culture1 = [Culture instanceWithPrimaryKey:@"en-AU"];
+    [culture1 setName:@"English Australia"];
+    
+    [culture1 save];
 
+    Culture *culture2 = [Culture instanceWithPrimaryKey:@"en-US"];
+    [culture2 setName:@"English US"];
+    
+    [culture2 save];
+    
     Color *testUniqueRed0 = [Color instanceWithPrimaryKey:@"red"];
-
+    
     // Prepopulate the Color table
     [@{
         @"red" : @"FF3838",
@@ -103,8 +118,7 @@
     
     NSAssert(testUniqueRed0 == testUniqueRed1, @"Instance-uniqueness check 1 failed");
     NSAssert(testUniqueRed1 == testUniqueRed2, @"Instance-uniqueness check 2 failed");
-
-
+    
     // Comment/uncomment this to see caching/retention behavior.
     // Without retaining these, scroll the collectionview, and you'll see each cell performing a SELECT to look up its color.
     // By retaining these, all of the colors are kept in memory by primary key, and those requests become cache hits.
@@ -114,9 +128,17 @@
     
     // Put some data in the table if there's not enough
     int numPeople = [[Person firstValueFromQuery:@"SELECT COUNT(*) FROM $T"] intValue];
-    while (numPeople < 26) {
+    while (numPeople < 52) {
+        
+        NSString *randomName = [RandomThings randomName];
+        
         Person *p = [Person new];
-        p.name = [RandomThings randomName];
+        
+        [p setCulture:culture1];
+        
+        
+        //I know the names aren't going to match to the true culture version but lets just pretend
+        p.name = [randomName stringByAppendingString:@" AU"];
         
         if (colorsUsedAlready.count >= allColors.count) [colorsUsedAlready removeAllObjects];
         
@@ -128,7 +150,31 @@
         [colorsUsedAlready addObject:color];
         p.color = color;
         
-        if ([p save]) numPeople++;
+        if([p save])
+            numPeople++;
+        else
+            NSLog(@"First Person failed");
+        
+        
+        
+        //Now create the other culture version of the person
+        Person *p2 = [Person new];
+        
+        [p2 setCulture:culture2];
+        
+        //I know the names aren't going to match to the true culture version but lets just pretend
+        p2.name = [randomName stringByAppendingString:@" US"];
+        
+        p2.color = color;
+        
+        [p2 save];
+        
+        if([p2 save])
+            numPeople++;
+        else
+            NSLog(@"Second Person failed");
+        
+        
     }
     
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];

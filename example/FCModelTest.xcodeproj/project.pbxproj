@@ -14,6 +14,7 @@
 		9230D70517F32EF1000C9C87 /* FCModelTest_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9230D70417F32EF1000C9C87 /* FCModelTest_Tests.m */; };
 		9230D70E17F332F5000C9C87 /* SimpleModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 9230D70D17F332F5000C9C87 /* SimpleModel.m */; };
 		9250891417F3751400BFE66E /* FCModel+Testing.m in Sources */ = {isa = PBXBuildFile; fileRef = 9250891317F3751400BFE66E /* FCModel+Testing.m */; };
+		9AF8646B18D66E3B00425AB0 /* Culture.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AF8646A18D66E3B00425AB0 /* Culture.m */; };
 		A924EA3118D0EC94000C28BD /* FCModelCachedObject.m in Sources */ = {isa = PBXBuildFile; fileRef = A924EA2E18D0EC94000C28BD /* FCModelCachedObject.m */; };
 		A924EA3218D0EC94000C28BD /* FCModelDatabaseQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = A924EA3018D0EC94000C28BD /* FCModelDatabaseQueue.m */; };
 		A99B9B2218B316DC00D79C6A /* FMDatabaseAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = A99B9B2118B316DC00D79C6A /* FMDatabaseAdditions.m */; };
@@ -61,6 +62,8 @@
 		9230D70D17F332F5000C9C87 /* SimpleModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SimpleModel.m; sourceTree = "<group>"; };
 		9250891217F3751400BFE66E /* FCModel+Testing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "FCModel+Testing.h"; sourceTree = "<group>"; };
 		9250891317F3751400BFE66E /* FCModel+Testing.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "FCModel+Testing.m"; sourceTree = "<group>"; };
+		9AF8646918D66E3B00425AB0 /* Culture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Culture.h; sourceTree = "<group>"; };
+		9AF8646A18D66E3B00425AB0 /* Culture.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Culture.m; sourceTree = "<group>"; };
 		A924EA2D18D0EC94000C28BD /* FCModelCachedObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelCachedObject.h; sourceTree = "<group>"; };
 		A924EA2E18D0EC94000C28BD /* FCModelCachedObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelCachedObject.m; sourceTree = "<group>"; };
 		A924EA2F18D0EC94000C28BD /* FCModelDatabaseQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelDatabaseQueue.h; sourceTree = "<group>"; };
@@ -256,6 +259,8 @@
 				A9EEFB1D17E4DCC00066C5EA /* Person.m */,
 				A9EEFB2617E6AF970066C5EA /* Color.h */,
 				A9EEFB2717E6AF970066C5EA /* Color.m */,
+				9AF8646918D66E3B00425AB0 /* Culture.h */,
+				9AF8646A18D66E3B00425AB0 /* Culture.m */,
 			);
 			name = Models;
 			sourceTree = "<group>";
@@ -376,6 +381,7 @@
 				A9EEFADC17E4C8EE0066C5EA /* ViewController.m in Sources */,
 				A9EEFAD317E4C8EE0066C5EA /* AppDelegate.m in Sources */,
 				A9EEFB0D17E4CB870066C5EA /* FMDatabase.m in Sources */,
+				9AF8646B18D66E3B00425AB0 /* Culture.m in Sources */,
 				A9EEFAFF17E4CB300066C5EA /* FCModel.m in Sources */,
 				A9EEFB1917E4D0010066C5EA /* PersonCell.m in Sources */,
 				A99B9B2218B316DC00D79C6A /* FMDatabaseAdditions.m in Sources */,
@@ -540,7 +546,9 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "FCModelTest/FCModelTest-Prefix.pch";
 				INFOPLIST_FILE = "FCModelTest/FCModelTest-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -553,7 +561,9 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "FCModelTest/FCModelTest-Prefix.pch";
 				INFOPLIST_FILE = "FCModelTest/FCModelTest-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
