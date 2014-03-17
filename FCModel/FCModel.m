@@ -751,6 +751,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 - (void)saveByNotification:(NSNotification *)n
 {
+    if (deleted) return;
     Class targetedClass = n.userInfo[FCModelClassKey];
     if (targetedClass && ! [self isKindOfClass:targetedClass]) return;
     [self save];
