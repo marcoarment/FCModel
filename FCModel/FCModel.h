@@ -13,6 +13,8 @@
 #import "FMDatabase.h"
 #endif
 
+@class FCModelFieldInfo;
+
 // These notifications use the relevant model's Class as the "object" for convenience so observers can,
 //  for instance, observe every update to any instance of the Person class:
 //
@@ -224,4 +226,25 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (void)beginNotificationBatch;
 + (void)endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications;
 
+// Field info: You probably won't need this most of the time, but it's nice to have sometimes. FCModel's generating this privately
+//  anyway, so you might as well have read-only access to it if it can help you avoid some code. (I've already needed it.)
+//
++ (FCModelFieldInfo *)infoForFieldName:(NSString *)fieldName;
 @end
+
+
+typedef NS_ENUM(NSInteger, FCModelFieldType) {
+    FCModelFieldTypeOther = 0,
+    FCModelFieldTypeText,
+    FCModelFieldTypeInteger,
+    FCModelFieldTypeDouble,
+    FCModelFieldTypeBool
+};
+
+@interface FCModelFieldInfo : NSObject
+@property (nonatomic, readonly) BOOL nullAllowed;
+@property (nonatomic, readonly) FCModelFieldType type;
+@property (nonatomic, readonly) id defaultValue;
+@property (nonatomic, readonly) Class propertyClass;
+@end
+

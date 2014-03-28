@@ -40,27 +40,25 @@ static NSMutableDictionary *g_enqueuedBatchNotifications = NULL;
 - (BOOL)executeUpdate:(NSString*)sql error:(NSError**)outErr withArgumentsInArray:(NSArray*)arrayArgs orDictionary:(NSDictionary *)dictionaryArgs orVAList:(va_list)args;
 @end
 
+static inline void onMainThreadAsync(void (^block)())
+{
+    if ([NSThread isMainThread]) block();
+    else dispatch_async(dispatch_get_main_queue(), block);
+}
 
-// FCFieldInfo is used for NULL/NOT NULL rules and default values
-typedef NS_ENUM(NSInteger, FCFieldType) {
-    FCFieldTypeOther = 0,
-    FCFieldTypeText,
-    FCFieldTypeInteger,
-    FCFieldTypeDouble,
-    FCFieldTypeBool
-};
 
-@interface FCFieldInfo : NSObject
+@interface FCModelFieldInfo ()
 @property (nonatomic) BOOL nullAllowed;
-@property (nonatomic) FCFieldType type;
+@property (nonatomic) FCModelFieldType type;
 @property (nonatomic) id defaultValue;
 @property (nonatomic) Class propertyClass;
 @end
-@implementation FCFieldInfo
+
+@implementation FCModelFieldInfo
 - (NSString *)description
 {
-    return [NSString stringWithFormat:@"<FCFieldInfo {%@ %@, default=%@}>",
-        (_type == FCFieldTypeText ? @"text" : (_type == FCFieldTypeInteger ? @"integer" : (_type == FCFieldTypeDouble ? @"double" : (_type == FCFieldTypeBool ? @"bool" : @"other")))),
+    return [NSString stringWithFormat:@"<FCModelFieldInfo {%@ %@, default=%@}>",
+        (_type == FCModelFieldTypeText ? @"text" : (_type == FCModelFieldTypeInteger ? @"integer" : (_type == FCModelFieldTypeDouble ? @"double" : (_type == FCModelFieldTypeBool ? @"bool" : @"other")))),
         _nullAllowed ? @"NULL" : @"NOT NULL",
         _defaultValue ? _defaultValue : @"NULL"
     ];
@@ -200,7 +198,10 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 {
     [NSNotificationCenter.defaultCenter postNotificationName:FCModelWillReloadNotification object:nil userInfo:@{ FCModelClassKey : self }];
     [NSNotificationCenter.defaultCenter postNotificationName:FCModelReloadNotification object:nil userInfo:@{ FCModelClassKey : self }];
-    [NSNotificationCenter.defaultCenter postNotificationName:FCModelAnyChangeNotification object:nil userInfo:@{ FCModelClassKey : self }];
+    
+    onMainThreadAsync(^{
+        [NSNotificationCenter.defaultCenter postNotificationName:FCModelAnyChangeNotification object:nil userInfo:@{ FCModelClassKey : self }];
+    });
 }
 
 #pragma mark - Mapping properties to database fields
@@ -283,6 +284,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
 + (NSArray *)databaseFieldNames     { return [g_fieldInfo[self] allKeys]; }
 + (NSString *)primaryKeyFieldName { return g_primaryKeyFieldName[self]; }
++ (FCModelFieldInfo *)infoForFieldName:(NSString *)fieldName { return g_fieldInfo[self][fieldName]; }
 
 // For unique-instance consistency:
 // Resolve discrepancies between supplied primary-key value type and the column type that comes out of the database.
@@ -294,12 +296,12 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
 
     if (! value) return value;
     
-    FCFieldInfo *primaryKeyInfo = g_fieldInfo[self][g_primaryKeyFieldName[self]];
+    FCModelFieldInfo *primaryKeyInfo = g_fieldInfo[self][g_primaryKeyFieldName[self]];
     
-    if ([value isKindOfClass:NSString.class] && (primaryKeyInfo.type == FCFieldTypeInteger || primaryKeyInfo.type == FCFieldTypeDouble || primaryKeyInfo.type == FCFieldTypeBool)) {
+    if ([value isKindOfClass:NSString.class] && (primaryKeyInfo.type == FCModelFieldTypeInteger || primaryKeyInfo.type == FCModelFieldTypeDouble || primaryKeyInfo.type == FCModelFieldTypeBool)) {
         dispatch_once(&onceToken, ^{ numberFormatter = [[NSNumberFormatter alloc] init]; });
         value = [numberFormatter numberFromString:value];
-    } else if (! [value isKindOfClass:NSString.class] && primaryKeyInfo.type == FCFieldTypeText) {
+    } else if (! [value isKindOfClass:NSString.class] && primaryKeyInfo.type == FCModelFieldTypeText) {
         value = [value stringValue];
     }
 
@@ -607,7 +609,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
         [self.class uniqueMapInit];
         
         [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL *stop) {
-            FCFieldInfo *info = (FCFieldInfo *)obj;
+            FCModelFieldInfo *info = (FCModelFieldInfo *)obj;
             
             id suppliedValue = fieldValues[key];
             if (suppliedValue) {
@@ -790,7 +792,7 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     NSAssert1(primaryKey, @"Cannot update %@ without primary key value", NSStringFromClass(self.class));
 
     // Validate NOT NULL columns
-    [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(id key, FCFieldInfo *info, BOOL *stop) {
+    [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(id key, FCModelFieldInfo *info, BOOL *stop) {
         if (info.nullAllowed) return;
     
         id value = [self valueForKey:key];
@@ -1020,28 +1022,33 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
                 else if (isPK > 1) isMultiColumnPrimaryKey = YES;
 
                 NSString *fieldType = [columnsRS stringForColumnIndex:2];
-                FCFieldInfo *info = [FCFieldInfo new];
+                FCModelFieldInfo *info = [FCModelFieldInfo new];
                 info.propertyClass = propertyClass;
                 info.nullAllowed = ! [columnsRS boolForColumnIndex:3];
+                
+                if (! isPK && info.nullAllowed && ! propertyClass) {
+                    NSLog(@"[FCModel] column %@.%@ allows NULL but matching model property is a primitive type; should be declared NOT NULL", tableName, fieldName);
+                    info.nullAllowed = NO;
+                }
                 
                 // Type-parsing algorithm from SQLite's column-affinity rules: http://www.sqlite.org/datatype3.html
                 // except the addition of BOOL as its own recognized type
                 if ([fieldType rangeOfString:@"INT"].location != NSNotFound) {
-                    info.type = FCFieldTypeInteger;
+                    info.type = FCModelFieldTypeInteger;
                     if ([fieldType rangeOfString:@"UNSIGNED"].location != NSNotFound) {
                         info.defaultValue = [NSNumber numberWithUnsignedLongLong:[columnsRS unsignedLongLongIntForColumnIndex:4]];
                     } else {
                         info.defaultValue = [NSNumber numberWithLongLong:[columnsRS longLongIntForColumnIndex:4]];
                     }
                 } else if ([fieldType rangeOfString:@"BOOL"].location != NSNotFound) {
-                    info.type = FCFieldTypeBool;
+                    info.type = FCModelFieldTypeBool;
                     info.defaultValue = [NSNumber numberWithBool:[columnsRS boolForColumnIndex:4]];
                 } else if (
                     [fieldType rangeOfString:@"TEXT"].location != NSNotFound ||
                     [fieldType rangeOfString:@"CHAR"].location != NSNotFound ||
                     [fieldType rangeOfString:@"CLOB"].location != NSNotFound
                 ) {
-                    info.type = FCFieldTypeText;
+                    info.type = FCModelFieldTypeText;
                     info.defaultValue = [[[columnsRS stringForColumnIndex:4]
                         stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"'"]]
                         stringByReplacingOccurrencesOfString:@"''" withString:@"'"
@@ -1051,10 +1058,10 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
                     [fieldType rangeOfString:@"FLOA"].location != NSNotFound ||
                     [fieldType rangeOfString:@"DOUB"].location != NSNotFound
                 ) {
-                    info.type = FCFieldTypeDouble;
+                    info.type = FCModelFieldTypeDouble;
                     info.defaultValue = [NSNumber numberWithDouble:[columnsRS doubleForColumnIndex:4]];
                 } else {
-                    info.type = FCFieldTypeOther;
+                    info.type = FCModelFieldTypeOther;
                     info.defaultValue = nil;
                 }
                 
@@ -1125,13 +1132,15 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     dispatch_semaphore_signal(lock);
     
     if (sendQueuedNotifications) {
-        [notificationsToSend enumerateKeysAndObjectsUsingBlock:^(Class class, NSDictionary *notificationsForClass, BOOL *stop) {
-            [notificationsForClass enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSSet *objects, BOOL *stop) {
-                [NSNotificationCenter.defaultCenter postNotificationName:name object:class userInfo:@{
-                    FCModelInstanceSetKey : objects
+        onMainThreadAsync(^{
+            [notificationsToSend enumerateKeysAndObjectsUsingBlock:^(Class class, NSDictionary *notificationsForClass, BOOL *stop) {
+                [notificationsForClass enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSSet *objects, BOOL *stop) {
+                    [NSNotificationCenter.defaultCenter postNotificationName:name object:class userInfo:@{
+                        FCModelInstanceSetKey : objects
+                    }];
                 }];
             }];
-        }];
+        });
     }
 }
 
@@ -1162,9 +1171,11 @@ typedef NS_ENUM(NSInteger, FCFieldType) {
     dispatch_semaphore_signal(lock);
     
     if (! enqueued) {
-        [NSNotificationCenter.defaultCenter postNotificationName:name object:self.class userInfo:@{
-            FCModelInstanceSetKey : [NSSet setWithObject:self]
-        }];
+        onMainThreadAsync(^{
+            [NSNotificationCenter.defaultCenter postNotificationName:name object:self.class userInfo:@{
+                FCModelInstanceSetKey : [NSSet setWithObject:self]
+            }];
+        });
     }
 }
 
