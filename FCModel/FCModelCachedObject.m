@@ -94,7 +94,7 @@
 + (instancetype)objectWithModelClass:(Class)fcModelClass cacheIdentifier:(id)identifier generator:(id (^)(void))generatorBlock
 {
     FCModelCachedObject *obj = [FCModelGeneratedObjectCache.sharedInstance objectWithModelClass:fcModelClass identifier:identifier];
-    
+
     if (! obj) {
         obj = [[FCModelCachedObject alloc] init];
         obj.modelClass = fcModelClass;
@@ -149,10 +149,6 @@
 
 @interface FCModelLiveResultArray ()
 @property (nonatomic) FCModelCachedObject *cachedObject;
-@property (nonatomic) Class modelClass;
-@property (nonatomic) NSString *queryAfterWHERE;
-@property (nonatomic) NSArray  *queryArguments;
-@property (nonatomic) NSArray  *currentResults;
 @end
 
 @implementation FCModelLiveResultArray
@@ -160,17 +156,9 @@
 + (instancetype)arrayWithModelClass:(Class)fcModelClass queryAfterWHERE:(NSString *)query arguments:(NSArray *)arguments
 {
     FCModelLiveResultArray *set = [self new];
-    set.modelClass = fcModelClass;
-    set.queryAfterWHERE = query;
-    set.queryArguments = arguments;
-
-    __weak FCModelLiveResultArray *weakSet = set;
+    
     set.cachedObject = [FCModelCachedObject objectWithModelClass:fcModelClass cacheIdentifier:@[(query ?: NSNull.null), (arguments ?: NSNull.null)] generator:^id{
-        return weakSet ? (
-            weakSet.queryAfterWHERE ?
-            [weakSet.modelClass instancesWhere:weakSet.queryAfterWHERE arguments:weakSet.queryArguments] :
-            [weakSet.modelClass allInstances]
-        ) : nil;
+        return query ? [fcModelClass instancesWhere:query arguments:arguments] : [fcModelClass allInstances];
     }];
 
     return set;
