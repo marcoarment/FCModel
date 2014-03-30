@@ -8,6 +8,7 @@
 
 #import "FCModel.h"
 #import "Color.h"
+#import "Culture.h"
 
 @interface Person : FCModel
 
@@ -15,11 +16,15 @@
 @property (nonatomic, assign) int64_t id;
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic, copy) NSString *colorName;
+@property (nonatomic, copy) NSString *cultureCode;
 @property (nonatomic, assign) int taps;
 @property (nonatomic) NSDate *createdTime;
 @property (nonatomic) NSDate *modifiedTime;
 
+
+
 // non-columns:
 @property (nonatomic) Color *color;
+@property (nonatomic) Culture *culture;
 
 @end

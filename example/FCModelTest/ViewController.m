@@ -9,9 +9,11 @@
 #import "ViewController.h"
 #import "PersonCell.h"
 #import "Person.h"
+#import "Culture.h"
 
 @interface ViewController ()
 @property (nonatomic, copy) NSArray *people;
+@property (nonatomic, retain) Culture *currentCulture;
 @end
 
 @implementation ViewController
@@ -31,7 +33,15 @@
 
 - (void)reloadPeople:(NSNotification *)notification
 {
-    self.people = [Person allInstances];
+    if(self.currentCulture == nil)
+    {
+        self.people = [Person allInstances];
+    }
+    else
+    {
+        self.people = [Person instancesWhere:@"cultureCode = ? ORDER BY name" arguments:[NSArray arrayWithObject:self.currentCulture.cultureCode]];
+    }
+    
     NSLog(@"Reloading with %lu people", (unsigned long) self.people.count);
     [self.collectionView reloadData];
 }
@@ -80,6 +90,28 @@
     [p save];
     
     [collectionView deselectItemAtIndexPath:indexPath animated:YES];
+}
+
+-(IBAction)cultureControlTapped:(id)sender
+{
+    
+    NSLog(@"self.cultureControl.selectedSegmentIndex %li", (long)self.cultureControl.selectedSegmentIndex);
+    
+    if(self.cultureControl.selectedSegmentIndex == 0)
+    {
+        self.currentCulture = nil;
+        
+    }else if(self.cultureControl.selectedSegmentIndex == 1)
+    {
+        self.currentCulture = [Culture instanceWithPrimaryKey:@"en-AU"];
+        
+    }else if(self.cultureControl.selectedSegmentIndex == 2)
+    {
+        self.currentCulture = [Culture instanceWithPrimaryKey:@"en-US"];
+        
+    }
+    
+    [self reloadPeople:nil];
 }
 
 
