@@ -224,6 +224,21 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 //  anyway, so you might as well have read-only access to it if it can help you avoid some code. (I've already needed it.)
 //
 + (FCModelFieldInfo *)infoForFieldName:(NSString *)fieldName;
+
+// Closing the database is not necessary in most cases. Only close it if you need to, such as if you need to delete and recreate
+//  the database file. Caveats:
+//     - Any FCModel call after closing will bizarrely fail until you call openDatabaseAtPath: again.
+//     - Any FCModel instances retained by any other parts of your code at the time of closing will become abandoned and untracked.
+//        The uniqueness guarantee will be broken, and operations on those instances will have undefined behavior. You really don't
+//        want this, and it may raise an exception in the future.
+//
+//        Until then, having any resident FCModel instances at the time of closing the database will result in scary console warnings
+//        and a return value of NO, which you should take as a condescending judgment and should fix immediately.
+//
+// Returns YES if there were no resident FCModel instances.
+//
++ (BOOL)closeDatabase;
+
 @end
 
 

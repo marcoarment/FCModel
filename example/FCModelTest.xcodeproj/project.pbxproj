@@ -13,7 +13,6 @@
 		9230D70317F32EF1000C9C87 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9230D70117F32EF1000C9C87 /* InfoPlist.strings */; };
 		9230D70517F32EF1000C9C87 /* FCModelTest_Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9230D70417F32EF1000C9C87 /* FCModelTest_Tests.m */; };
 		9230D70E17F332F5000C9C87 /* SimpleModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 9230D70D17F332F5000C9C87 /* SimpleModel.m */; };
-		9250891417F3751400BFE66E /* FCModel+Testing.m in Sources */ = {isa = PBXBuildFile; fileRef = 9250891317F3751400BFE66E /* FCModel+Testing.m */; };
 		A924EA3118D0EC94000C28BD /* FCModelCachedObject.m in Sources */ = {isa = PBXBuildFile; fileRef = A924EA2E18D0EC94000C28BD /* FCModelCachedObject.m */; };
 		A924EA3218D0EC94000C28BD /* FCModelDatabaseQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = A924EA3018D0EC94000C28BD /* FCModelDatabaseQueue.m */; };
 		A99B9B2218B316DC00D79C6A /* FMDatabaseAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = A99B9B2118B316DC00D79C6A /* FMDatabaseAdditions.m */; };
@@ -59,8 +58,6 @@
 		9230D70617F32EF1000C9C87 /* FCModelTest Tests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "FCModelTest Tests-Prefix.pch"; sourceTree = "<group>"; };
 		9230D70C17F332F4000C9C87 /* SimpleModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SimpleModel.h; sourceTree = "<group>"; };
 		9230D70D17F332F5000C9C87 /* SimpleModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SimpleModel.m; sourceTree = "<group>"; };
-		9250891217F3751400BFE66E /* FCModel+Testing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "FCModel+Testing.h"; sourceTree = "<group>"; };
-		9250891317F3751400BFE66E /* FCModel+Testing.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "FCModel+Testing.m"; sourceTree = "<group>"; };
 		A924EA2D18D0EC94000C28BD /* FCModelCachedObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelCachedObject.h; sourceTree = "<group>"; };
 		A924EA2E18D0EC94000C28BD /* FCModelCachedObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelCachedObject.m; sourceTree = "<group>"; };
 		A924EA2F18D0EC94000C28BD /* FCModelDatabaseQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelDatabaseQueue.h; sourceTree = "<group>"; };
@@ -133,8 +130,6 @@
 		9230D6FE17F32EF1000C9C87 /* FCModelTest Tests */ = {
 			isa = PBXGroup;
 			children = (
-				9250891217F3751400BFE66E /* FCModel+Testing.h */,
-				9250891317F3751400BFE66E /* FCModel+Testing.m */,
 				9230D70417F32EF1000C9C87 /* FCModelTest_Tests.m */,
 				9230D70C17F332F4000C9C87 /* SimpleModel.h */,
 				9230D70D17F332F5000C9C87 /* SimpleModel.m */,
@@ -360,7 +355,6 @@
 			files = (
 				9230D70517F32EF1000C9C87 /* FCModelTest_Tests.m in Sources */,
 				9230D70E17F332F5000C9C87 /* SimpleModel.m in Sources */,
-				9250891417F3751400BFE66E /* FCModel+Testing.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

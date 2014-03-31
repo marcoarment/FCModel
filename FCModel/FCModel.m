@@ -1074,14 +1074,27 @@ static inline void onMainThreadAsync(void (^block)())
     }];
 }
 
-// Note: use of +closeDatabase is unsupported for apps - it's purely to enable unit testing
-+ (void)closeDatabase
++ (BOOL)closeDatabase
 {
+    __block BOOL modelsAreStillLoaded = NO;
+    dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
+    [g_instances enumerateKeysAndObjectsUsingBlock:^(Class class, NSMapTable *classInstances, BOOL *stop) {
+        for (id primaryKeyValue in classInstances.keyEnumerator.allObjects) {
+            modelsAreStillLoaded = YES;
+            NSLog(@"[FCModel] closeDatabase: %@ ID %@ is still retained by something and is being abandoned by FCModel. This can cause weird bugs. Don't let this happen.", NSStringFromClass(class), primaryKeyValue);
+        }
+    }];
+    [g_instances removeAllObjects];
+    dispatch_semaphore_signal(g_instancesReadLock);
+
     [g_databaseQueue close];
     g_databaseQueue = nil;
     g_primaryKeyFieldName = nil;
     g_fieldInfo = nil;
-    [g_instances removeAllObjects];
+    g_tablesUsingAutoIncrementEmulation = nil;
+    g_enqueuedBatchNotifications = nil;
+
+    return ! modelsAreStillLoaded;
 }
 
 + (void)inDatabaseSync:(void (^)(FMDatabase *db))block { [g_databaseQueue inDatabase:block]; }

@@ -8,7 +8,6 @@
 
 #import <XCTest/XCTest.h>
 #import "FCModel.h"
-#import "FCModel+Testing.h"
 #import "SimpleModel.h"
 
 @interface FCModelTest_Tests : XCTestCase
@@ -26,7 +25,7 @@
 
 - (void)tearDown
 {
-    [self closeDatabase];
+    [FCModel closeDatabase];
     [super tearDown];
 }
 
@@ -54,16 +53,21 @@
 
 - (void)testDatabaseCloseFlushesCache
 {
-    SimpleModel *entity1 = [SimpleModel instanceWithPrimaryKey:@"a"];
-    entity1.name = @"Alice";
-    [entity1 save];
+    void *e1ptr;
+    @autoreleasepool {
+        SimpleModel *entity1 = [SimpleModel instanceWithPrimaryKey:@"a"];
+        entity1.name = @"Alice";
+        [entity1 save];
+        e1ptr = (__bridge void *)(entity1);
+        entity1 = nil;
+    }
     
-    [self closeDatabase];
+    XCTAssertTrue([FCModel closeDatabase]);
     [self openDatabase];
     
     SimpleModel *entity2 = [SimpleModel instanceWithPrimaryKey:@"a"];
     XCTAssertTrue(entity2.existsInDatabase);
-    XCTAssertTrue(entity2 != entity1);
+    XCTAssertTrue(entity2 != (__bridge SimpleModel *)(e1ptr));
 }
 
 #pragma mark - Helper methods
@@ -92,11 +96,6 @@
         }
         [db commit];
     }];
-}
-
-- (void)closeDatabase
-{
-    [FCModel closeDatabase];
 }
 
 - (NSString *)dbPath
