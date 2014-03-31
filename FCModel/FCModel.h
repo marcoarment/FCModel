@@ -93,8 +93,8 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 // CRUD basics
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue; // will create if nonexistent
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create; // will return nil if nonexistent
-- (FCModelSaveResult)revertUnsavedChanges;
-- (FCModelSaveResult)revertUnsavedChangeToFieldName:(NSString *)fieldName;
+- (void)revertUnsavedChanges;
+- (void)revertUnsavedChangeToFieldName:(NSString *)fieldName;
 - (FCModelSaveResult)delete;
 - (FCModelSaveResult)save;
 + (void)saveAll; // Resolved by class: call on FCModel to save all, on a subclass to save just those and their subclasses, etc.
@@ -166,12 +166,6 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 //  a unique value before raising an exception.
 //
 + (id)primaryKeyValueForNewInstance;
-
-// A bit redundant with KVO, but friendlier to multi-level subclassing, and only called for
-//  meaningful changes (not setting to same value, or initially loading from the database)
-//  on non-primary-key database columns.
-//
-- (void)didChangeValueForFieldName:(NSString *)fieldName fromValue:(id)oldValue toValue:(id)newValue;
 
 // Subclasses can customize how properties are serialized for the database.
 //
