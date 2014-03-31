@@ -70,7 +70,6 @@ static inline void onMainThreadAsync(void (^block)())
     BOOL existsInDatabase;
     BOOL deleted;
 }
-@property (nonatomic, strong) NSDictionary *databaseFieldNames;
 @property (nonatomic, strong) NSMutableDictionary *changedProperties;
 @property (nonatomic, copy) NSError *_lastSQLiteError;
 @end
