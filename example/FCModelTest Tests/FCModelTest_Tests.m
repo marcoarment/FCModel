@@ -89,7 +89,8 @@
             if (! [db executeUpdate:
                    @"CREATE TABLE SimpleModel ("
                    @"    uniqueID     TEXT PRIMARY KEY,"
-                   @"    name         TEXT"
+                   @"    name         TEXT,"
+                   @"    typelessTest"
                    @");"
                    ]) failedAt(1);
             *schemaVersion = 1;

@@ -997,11 +997,20 @@ static inline void onMainThreadAsync(void (^block)())
                 
                 Class propertyClass;
                 NSString *propertyClassName, *typeString = propertyAttributes.firstObject;
-                if (typeString &&
-                    [typeString hasPrefix:@"T@\""] && [typeString hasSuffix:@"\""] && typeString.length > 4 &&
-                    (propertyClassName = [typeString substringWithRange:NSMakeRange(3, typeString.length - 4)])
-                ) {
-                    propertyClass = NSClassFromString(propertyClassName);
+                if (typeString) {
+                    if (
+                        [typeString hasPrefix:@"T@\""] && [typeString hasSuffix:@"\""] && typeString.length > 4 &&
+                        (propertyClassName = [typeString substringWithRange:NSMakeRange(3, typeString.length - 4)])
+                    ) {
+                        propertyClass = NSClassFromString(propertyClassName);
+                    } else if ([typeString isEqualToString:@"T@"]) {
+                        // Property is defined as "id". It's not technically correct to use NSObject here, but I don't think there's a better option.
+                        // The only negative side effects in practice should be if your code looks at FCModelFieldInfo directly and does something with
+                        //  this property, *and* you need to accommodate for objects that aren't NSObjects, *and* you somehow forget that when using this
+                        //  type info. But if you're in the business of declaring "id" properties and typeless columns to SQLite, I think that's an
+                        //  acceptable risk.
+                        propertyClass = NSObject.class;
+                    }
                 }
                 
                 int isPK = [columnsRS intForColumnIndex:5];
