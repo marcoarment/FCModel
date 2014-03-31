@@ -119,7 +119,7 @@ static inline void onMainThreadAsync(void (^block)())
 
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue databaseRowValues:(NSDictionary *)fieldValues createIfNonexistent:(BOOL)create
 {
-    if (! primaryKeyValue || primaryKeyValue == [NSNull null]) return [self new];
+    if (! primaryKeyValue || primaryKeyValue == NSNull.null) return [self new];
     [self uniqueMapInit];
     
     primaryKeyValue = [self normalizedPrimaryKeyValue:primaryKeyValue];
@@ -157,7 +157,7 @@ static inline void onMainThreadAsync(void (^block)())
 - (void)registerUniqueInstance
 {
     id primaryKeyValue = self.primaryKey;
-    if (! primaryKeyValue || primaryKeyValue == [NSNull null]) return;
+    if (! primaryKeyValue || primaryKeyValue == NSNull.null) return;
     [self.class uniqueMapInit];
 
     dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
@@ -170,7 +170,7 @@ static inline void onMainThreadAsync(void (^block)())
 - (void)removeUniqueInstance
 {
     id primaryKeyValue = self.primaryKey;
-    if (! primaryKeyValue || primaryKeyValue == [NSNull null]) return;
+    if (! primaryKeyValue || primaryKeyValue == NSNull.null) return;
     [self.class uniqueMapInit];
     
     dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
@@ -227,7 +227,7 @@ static inline void onMainThreadAsync(void (^block)())
 - (id)encodedValueForFieldName:(NSString *)fieldName
 {
     id value = [self serializedDatabaseRepresentationOfValue:[self valueForKey:fieldName] forPropertyNamed:fieldName];
-    return value ?: [NSNull null];
+    return value ?: NSNull.null;
 }
 
 - (id)unserializedRepresentationOfDatabaseValue:(id)databaseValue forPropertyNamed:(NSString *)propertyName
@@ -253,7 +253,7 @@ static inline void onMainThreadAsync(void (^block)())
 
 - (void)decodeFieldValue:(id)value intoPropertyName:(NSString *)propertyName
 {
-    if (value == [NSNull null]) value = nil;
+    if (value == NSNull.null) value = nil;
     if (class_getProperty(self.class, propertyName.UTF8String)) {
         [self setValue:[self unserializedRepresentationOfDatabaseValue:value forPropertyNamed:propertyName] forKeyPath:propertyName];
     }
@@ -673,6 +673,7 @@ static inline void onMainThreadAsync(void (^block)())
             id originallyLoadedValue = self._rowValuesInDatabase ? self._rowValuesInDatabase[fieldName] : nil;
             NSAssert3(originallyLoadedValue, @"%@ ID %@ somehow has no originallyLoadedValue for field [%@]", NSStringFromClass(self.class), self.primaryKey, fieldName);
             if (originallyLoadedValue == NSNull.null) originallyLoadedValue = nil;
+            originallyLoadedValue = [self unserializedRepresentationOfDatabaseValue:originallyLoadedValue forPropertyNamed:fieldName];
             
             if (! [existing isEqual:fieldValue]) {
                 if (! [existing isEqual:originallyLoadedValue]) {
@@ -724,7 +725,7 @@ static inline void onMainThreadAsync(void (^block)())
 - (void)revertUnsavedChangeToFieldName:(NSString *)fieldName
 {
     id oldValue = self._rowValuesInDatabase ? self._rowValuesInDatabase[fieldName] : nil;
-    if (oldValue) [self setValue:(oldValue == NSNull.null ? nil : oldValue) forKeyPath:fieldName];
+    if (oldValue) [self decodeFieldValue:oldValue intoPropertyName:fieldName];
 }
 
 - (void)dealloc
@@ -742,9 +743,14 @@ static inline void onMainThreadAsync(void (^block)())
     
     [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(NSString *fieldName, FCModelFieldInfo *info, BOOL *stop) {
         if ([fieldName isEqualToString:g_primaryKeyFieldName[self.class]]) return;
+
         id oldValue = self._rowValuesInDatabase ? self._rowValuesInDatabase[fieldName] : nil;
+        if (oldValue) oldValue = [self unserializedRepresentationOfDatabaseValue:(oldValue == NSNull.null ? nil : oldValue) forPropertyNamed:fieldName];
+        
         id newValue = [self valueForKey:fieldName];
-        if (! oldValue || (oldValue && ! newValue) || (oldValue && newValue && ! [newValue isEqual:oldValue])) changes[fieldName] = newValue ?: [NSNull null];
+        if ((oldValue || newValue) && (! oldValue || (oldValue && ! newValue) || (oldValue && newValue && ! [newValue isEqual:oldValue]))) {
+            changes[fieldName] = newValue ?: NSNull.null;
+        }
     }];
 
     return [changes copy];
@@ -772,7 +778,7 @@ static inline void onMainThreadAsync(void (^block)())
         if (info.nullAllowed) return;
     
         id value = [self valueForKey:key];
-        if (! value || value == [NSNull null]) {
+        if (! value || value == NSNull.null) {
             [[NSException exceptionWithName:NSInvalidArgumentException reason:[NSString stringWithFormat:@"Cannot save NULL to NOT NULL property %@.%@", tableName, key] userInfo:nil] raise];
         }
     }];
@@ -841,7 +847,10 @@ static inline void onMainThreadAsync(void (^block)())
     }
     
     NSMutableDictionary *newRowValues = self._rowValuesInDatabase ? [self._rowValuesInDatabase mutableCopy] : [NSMutableDictionary dictionary];
-    [changes enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) { newRowValues[key] = obj; }];
+    [changes enumerateKeysAndObjectsUsingBlock:^(NSString *fieldName, id obj, BOOL *stop) {
+        obj = [self serializedDatabaseRepresentationOfValue:(obj == NSNull.null ? nil : obj) forPropertyNamed:fieldName];
+        newRowValues[fieldName] = obj ?: NSNull.null;
+    }];
     self._rowValuesInDatabase = newRowValues;
     existsInDatabase = YES;
     
