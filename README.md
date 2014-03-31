@@ -33,7 +33,7 @@ SQLite tables are associated with FCModel subclasses of the same name, and datab
 CREATE TABLE Person (
     id           INTEGER PRIMARY KEY,
     name         TEXT NOT NULL DEFAULT '',
-    createdTime  INTEGER NOT NULL
+    createdTime  REAL NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS name ON Person (name);
@@ -62,7 +62,7 @@ Database-mapped object properties can be:
 * Primitives (`int`, `double`, `BOOL`, `int64_t`, etc.) or `NSNumber`, limited to [SQLite's precision](http://www.sqlite.org/datatype3.html) (64-bit signed for integers).
 * `NSString`, which is always stored and loaded as UTF-8
 * `NSData` for `BLOB` columns
-* `NSDate`, which is converted to/from 64-bit signed Unix timestamp integers for storage. Be careful that any column you define as an `NSDate` fits within the 64-bit signed Unix timestamp range, and keep in mind that any subsecond precision will be lost.
+* `NSDate`, which is converted to/from `NSTimeInterval` since 1970 (signed `double` versions of Unix timestamps) for storage. Declare `NSDate` columns as `REAL` in the table.
 * `NSURL`, which is converted to/from its `absoluteString` representation for storage.
 * `NSDictionary` or `NSArray`, which are converted to/from binary plists for storage (so each contained object must be an `NSData`, `NSString`, `NSArray`, `NSDictionary`, `NSDate`, or `NSNumber`).
 
@@ -72,8 +72,6 @@ To override this behavior or customize it for other types, models may override t
 - (id)serializedDatabaseRepresentationOfValue:(id)instanceValue forPropertyNamed:(NSString *)propertyName;
 - (id)unserializedRepresentationOfDatabaseValue:(id)databaseValue forPropertyNamed:(NSString *)propertyName;
 ```
-
-Field-change tracking is implemented using KVO. If you manipulate properties directly in the class (without using synthesized accessors), you __must__ call `didChangeValueForKey:` afterward to register the change with FCModel.
 
 You can name your column-property ivars whatever you like. FCModel associates columns with property names, not ivar names.
 
@@ -206,7 +204,7 @@ If you want automatic relationship mappings, consider using Core Data. It's very
 
 Each FCModel instance is exclusive in memory by its table and primary-key value. If you load Person ID 1, then some other query loads Person ID 1, they'll be the same instance (unless the first one got deallocated in the meantime).
 
-FCModels are safe to retain for a while, even by the UI. You can use KVO to observe changes, or you can write your own change-tracking logic in your model implementations. Just check instances' `deleted` property where relevant, and watch for change notifications.
+FCModels are safe to retain for a while, even by the UI. You can use KVO to observe changes. Just check instances' `deleted` property where relevant, and watch for change notifications.
 
 FCModels are inherently cached by primary key:
 
@@ -224,7 +222,7 @@ Person *bob = [Person instanceWithPrimaryKey:@(123)];
 
 FCModels can be accessed and modified from any thread (again, as far as I know), but all database operations are run synchronously on a serial queue, so you're not likely to see any performance gains by concurrent access.
 
-If you observe any of FCModel's notifications (`FCModelInsertNotification`, etc.), be careful when updating the UI. Those are posted on the thread that caused the update, which may not be the main thread if you're accessing models from other threads or queues.
+FCModel's public notifications (`FCModelInsertNotification`, etc.) are always posted on the main thread.
 
 ## Support
 
