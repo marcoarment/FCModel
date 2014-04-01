@@ -665,35 +665,34 @@ static inline void onMainThreadAsync(void (^block)())
         [self postChangeNotification:FCModelDeleteNotification];
         [self postChangeNotification:FCModelAnyChangeNotification];
     } else {
-        __block BOOL didUpdate = NO;
+        NSDictionary *unsavedChanges = self.unsavedChanges;
+
         [resultDictionary enumerateKeysAndObjectsUsingBlock:^(NSString *fieldName, id fieldValue, BOOL *stop) {
             if ([fieldName isEqualToString:g_primaryKeyFieldName[self.class]]) return;
+            fieldValue = fieldValue == NSNull.null ? nil : fieldValue;
             
-            id existing = [self valueForKeyPath:fieldName];
-            id originallyLoadedValue = self._rowValuesInDatabase ? self._rowValuesInDatabase[fieldName] : nil;
-            NSAssert3(originallyLoadedValue, @"%@ ID %@ somehow has no originallyLoadedValue for field [%@]", NSStringFromClass(self.class), self.primaryKey, fieldName);
-            if (originallyLoadedValue == NSNull.null) originallyLoadedValue = nil;
-            originallyLoadedValue = [self unserializedRepresentationOfDatabaseValue:originallyLoadedValue forPropertyNamed:fieldName];
-            
-            if (! [existing isEqual:fieldValue]) {
-                if (! [existing isEqual:originallyLoadedValue]) {
+            id unsavedChangeValue = unsavedChanges[fieldName];
+            if (unsavedChangeValue) {
+                // Conflict if the value isn't equal to the new DB value.
+                if (unsavedChangeValue == NSNull.null) unsavedChangeValue = nil;
+
+                if (unsavedChangeValue != fieldValue && ((! unsavedChangeValue || ! fieldValue) || ! [fieldValue isEqual:unsavedChangeValue])) {
                     // Conflict: model was loaded from DB, modified without being saved, and now the reload wants to set a different value
-                    id newFieldValue = [self valueOfFieldName:fieldName byResolvingReloadConflictWithDatabaseValue:fieldValue];
-                    fieldValue = newFieldValue;
+                    fieldValue = [self valueOfFieldName:fieldName byResolvingReloadConflictWithDatabaseValue:fieldValue];
                 }
-                
+
                 [self decodeFieldValue:fieldValue intoPropertyName:fieldName];
-                didUpdate = YES;
+            } else {
+                // No conflict. Just assign the new value.
+                [self decodeFieldValue:fieldValue intoPropertyName:fieldName];
             }
         }];
         
         self._rowValuesInDatabase = resultDictionary;
         
-        if (didUpdate) {
-            [self didUpdate];
-            [self postChangeNotification:FCModelUpdateNotification];
-            [self postChangeNotification:FCModelAnyChangeNotification];
-        }
+        [self didUpdate];
+        [self postChangeNotification:FCModelUpdateNotification];
+        [self postChangeNotification:FCModelAnyChangeNotification];
     }
 }
 
