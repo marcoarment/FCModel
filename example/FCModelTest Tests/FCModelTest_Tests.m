@@ -70,6 +70,16 @@
     XCTAssertTrue(entity2 != (__bridge SimpleModel *)(e1ptr));
 }
 
+- (void)testDateEncodingChangeMonitoring {
+    NSDate *date = [NSDate date];
+    SimpleModel *entity1 = [SimpleModel new];
+    entity1.date = date;
+    FCModelSaveResult saveResult1 = [entity1 save];
+    XCTAssertEqual(saveResult1, FCModelSaveSucceeded);
+    FCModelSaveResult saveResult2 = [entity1 save];
+    XCTAssertEqual(saveResult2, FCModelSaveNoChanges, @"Repeated saves should yield no changes");
+}
+
 #pragma mark - Helper methods
 
 - (void)openDatabase
@@ -90,6 +100,7 @@
                    @"CREATE TABLE SimpleModel ("
                    @"    uniqueID     TEXT PRIMARY KEY,"
                    @"    name         TEXT,"
+                   @"    date         DATETIME,"
                    @"    typelessTest"
                    @");"
                    ]) failedAt(1);

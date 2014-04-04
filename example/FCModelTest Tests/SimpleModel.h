@@ -12,6 +12,7 @@
 
 @property (nonatomic, copy) NSString *uniqueID;
 @property (nonatomic, copy) NSString *name;
+@property (nonatomic, copy) NSDate *date;
 @property (nonatomic) id typelessTest;
 
 @end
