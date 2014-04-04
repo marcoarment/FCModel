@@ -1084,6 +1084,8 @@ static inline void onMainThreadAsync(void (^block)())
 
 + (BOOL)closeDatabase
 {
+    [FCModelCachedObject clearCache];
+
     __block BOOL modelsAreStillLoaded = NO;
     dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
     [g_instances enumerateKeysAndObjectsUsingBlock:^(Class class, NSMapTable *classInstances, BOOL *stop) {

@@ -67,7 +67,8 @@
 
 - (void)dealloc
 {
-    [self close];
+    [_openDatabase close];
+    self.openDatabase = nil;
 }
 
 - (void)inDatabase:(void (^)(FMDatabase *db))block
