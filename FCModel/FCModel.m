@@ -1143,8 +1143,8 @@ static inline void onMainThreadAsync(void (^block)())
     
     if (sendQueuedNotifications) {
         onMainThreadAsync(^{
-            [notificationsToSend enumerateKeysAndObjectsUsingBlock:^(Class class, NSDictionary *notificationsForClass, BOOL *stop) {
-                [notificationsForClass enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSSet *objects, BOOL *stop) {
+            [notificationsToSend enumerateKeysAndObjectsUsingBlock:^(Class class, NSDictionary *notificationsForClass, BOOL *stopOuter) {
+                [notificationsForClass enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSSet *objects, BOOL *stopInner) {
                     [NSNotificationCenter.defaultCenter postNotificationName:name object:class userInfo:@{
                         FCModelInstanceSetKey : objects
                     }];
