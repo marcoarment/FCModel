@@ -78,6 +78,11 @@
     XCTAssertEqual(saveResult1, FCModelSaveSucceeded);
     FCModelSaveResult saveResult2 = [entity1 save];
     XCTAssertEqual(saveResult2, FCModelSaveNoChanges, @"Repeated saves should yield no changes");
+    
+    // actually changing the date should cause changes during save
+    entity1.date = [NSDate dateWithTimeIntervalSinceNow:1];
+    FCModelSaveResult saveResult3 = [entity1 save];
+    XCTAssertEqual(saveResult3, FCModelSaveSucceeded);
 }
 
 #pragma mark - Helper methods
