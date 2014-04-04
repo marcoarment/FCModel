@@ -748,7 +748,15 @@ static inline void onMainThreadAsync(void (^block)())
         
         id newValue = [self valueForKey:fieldName];
         if ((oldValue || newValue) && (! oldValue || (oldValue && ! newValue) || (oldValue && newValue && ! [newValue isEqual:oldValue]))) {
-            changes[fieldName] = newValue ?: NSNull.null;
+            BOOL valueChanged = YES;
+            if (oldValue && newValue && [oldValue isKindOfClass:[NSDate class]] && [newValue isKindOfClass:[NSDate class]]) {
+                // to avoid rounding errors, dates are flagged as changed only if the difference is significant enough (well below one second)
+                valueChanged = fabs([oldValue timeIntervalSinceDate:newValue]) > 0.000001;
+            }
+            
+            if (valueChanged) {
+                changes[fieldName] = newValue ?: NSNull.null;
+            }
         }
     }];
 
