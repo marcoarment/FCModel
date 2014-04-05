@@ -1036,20 +1036,21 @@ static inline void onMainThreadAsync(void (^block)())
                 
                 // Type-parsing algorithm from SQLite's column-affinity rules: http://www.sqlite.org/datatype3.html
                 // except the addition of BOOL as its own recognized type
-                if ([fieldType rangeOfString:@"INT"].location != NSNotFound) {
+                // parse case insensitive schema
+                if ([fieldType rangeOfString:@"INT" options:NSCaseInsensitiveSearch].location != NSNotFound) {
                     info.type = FCModelFieldTypeInteger;
-                    if ([fieldType rangeOfString:@"UNSIGNED"].location != NSNotFound) {
+                    if ([fieldType rangeOfString:@"UNSIGNED" options:NSCaseInsensitiveSearch].location != NSNotFound) {
                         info.defaultValue = [NSNumber numberWithUnsignedLongLong:[columnsRS unsignedLongLongIntForColumnIndex:4]];
                     } else {
                         info.defaultValue = [NSNumber numberWithLongLong:[columnsRS longLongIntForColumnIndex:4]];
                     }
-                } else if ([fieldType rangeOfString:@"BOOL"].location != NSNotFound) {
+                } else if ([fieldType rangeOfString:@"BOOL" options:NSCaseInsensitiveSearch].location != NSNotFound) {
                     info.type = FCModelFieldTypeBool;
                     info.defaultValue = [NSNumber numberWithBool:[columnsRS boolForColumnIndex:4]];
                 } else if (
-                    [fieldType rangeOfString:@"TEXT"].location != NSNotFound ||
-                    [fieldType rangeOfString:@"CHAR"].location != NSNotFound ||
-                    [fieldType rangeOfString:@"CLOB"].location != NSNotFound
+                    [fieldType rangeOfString:@"TEXT" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                    [fieldType rangeOfString:@"CHAR" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                    [fieldType rangeOfString:@"CLOB" options:NSCaseInsensitiveSearch].location != NSNotFound
                 ) {
                     info.type = FCModelFieldTypeText;
                     info.defaultValue = [[[columnsRS stringForColumnIndex:4]
@@ -1057,9 +1058,9 @@ static inline void onMainThreadAsync(void (^block)())
                         stringByReplacingOccurrencesOfString:@"''" withString:@"'"
                     ];
                 } else if (
-                    [fieldType rangeOfString:@"REAL"].location != NSNotFound ||
-                    [fieldType rangeOfString:@"FLOA"].location != NSNotFound ||
-                    [fieldType rangeOfString:@"DOUB"].location != NSNotFound
+                    [fieldType rangeOfString:@"REAL" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                    [fieldType rangeOfString:@"FLOA" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+                    [fieldType rangeOfString:@"DOUB" options:NSCaseInsensitiveSearch].location != NSNotFound
                 ) {
                     info.type = FCModelFieldTypeDouble;
                     info.defaultValue = [NSNumber numberWithDouble:[columnsRS doubleForColumnIndex:4]];

@@ -70,7 +70,8 @@
     XCTAssertTrue(entity2 != (__bridge SimpleModel *)(e1ptr));
 }
 
-- (void)testDateEncodingChangeMonitoring {
+- (void)testDateEncodingChangeMonitoring
+{
     NSDate *date = [NSDate date];
     SimpleModel *entity1 = [SimpleModel new];
     entity1.date = date;
@@ -83,6 +84,22 @@
     entity1.date = [NSDate dateWithTimeIntervalSinceNow:1];
     FCModelSaveResult saveResult3 = [entity1 save];
     XCTAssertEqual(saveResult3, FCModelSaveSucceeded);
+}
+
+- (void)testMappingFieldInfo
+{
+    SimpleModel *entity = [SimpleModel new];
+    FCModelFieldInfo *info1 = [[entity class] infoForFieldName:@"uniqueID"];
+    FCModelFieldInfo *info2 = [[entity class] infoForFieldName:@"name"];
+    FCModelFieldInfo *info3 = [[entity class] infoForFieldName:@"lowercase"];
+    FCModelFieldInfo *info4 = [[entity class] infoForFieldName:@"mixedcase"];
+    FCModelFieldInfo *info5 = [[entity class] infoForFieldName:@"typelessTest"];
+    
+    XCTAssertEqual(info1.type, FCModelFieldTypeText);
+    XCTAssertEqual(info2.type, FCModelFieldTypeText);
+    XCTAssertEqual(info3.type, FCModelFieldTypeText);
+    XCTAssertEqual(info4.type, FCModelFieldTypeInteger);
+    XCTAssertEqual(info5.type, FCModelFieldTypeOther);
 }
 
 #pragma mark - Helper methods
@@ -106,6 +123,8 @@
                    @"    uniqueID     TEXT PRIMARY KEY,"
                    @"    name         TEXT,"
                    @"    date         DATETIME,"
+                   @"    lowercase         text,"
+                   @"    mixedcase         Integer,"
                    @"    typelessTest"
                    @");"
                    ]) failedAt(1);
