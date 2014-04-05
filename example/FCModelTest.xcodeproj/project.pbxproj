@@ -37,6 +37,7 @@
 		A9EEFB2517E5F5060066C5EA /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = A9EEFB2417E5F5060066C5EA /* Default-568h@2x.png */; };
 		A9EEFB2817E6AF970066C5EA /* Color.m in Sources */ = {isa = PBXBuildFile; fileRef = A9EEFB2717E6AF970066C5EA /* Color.m */; };
 		A9EEFB2C17E6BCF80066C5EA /* FMDatabasePool.m in Sources */ = {isa = PBXBuildFile; fileRef = A9EEFB2B17E6BCF80066C5EA /* FMDatabasePool.m */; };
+		F6759BC418EF89E700ED1517 /* CustomModel.m in Sources */ = {isa = PBXBuildFile; fileRef = F6759BC318EF89E700ED1517 /* CustomModel.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -99,6 +100,8 @@
 		A9EEFB2717E6AF970066C5EA /* Color.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Color.m; sourceTree = "<group>"; };
 		A9EEFB2A17E6BCF80066C5EA /* FMDatabasePool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FMDatabasePool.h; sourceTree = "<group>"; };
 		A9EEFB2B17E6BCF80066C5EA /* FMDatabasePool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FMDatabasePool.m; sourceTree = "<group>"; };
+		F6759BC218EF89E700ED1517 /* CustomModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CustomModel.h; sourceTree = "<group>"; };
+		F6759BC318EF89E700ED1517 /* CustomModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CustomModel.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,6 +134,8 @@
 			isa = PBXGroup;
 			children = (
 				9230D70417F32EF1000C9C87 /* FCModelTest_Tests.m */,
+				F6759BC218EF89E700ED1517 /* CustomModel.h */,
+				F6759BC318EF89E700ED1517 /* CustomModel.m */,
 				9230D70C17F332F4000C9C87 /* SimpleModel.h */,
 				9230D70D17F332F5000C9C87 /* SimpleModel.m */,
 				9230D6FF17F32EF1000C9C87 /* Supporting Files */,
@@ -355,6 +360,7 @@
 			files = (
 				9230D70517F32EF1000C9C87 /* FCModelTest_Tests.m in Sources */,
 				9230D70E17F332F5000C9C87 /* SimpleModel.m in Sources */,
+				F6759BC418EF89E700ED1517 /* CustomModel.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

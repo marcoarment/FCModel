@@ -19,7 +19,6 @@
     NSString *dbPath = [[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0] stringByAppendingPathComponent:@"testDB.sqlite3"];
     NSLog(@"DB path: %@", dbPath);
 
-    return YES; //
     // New DB on every launch for testing (comment out for persistence testing)
     [NSFileManager.defaultManager removeItemAtPath:dbPath error:NULL];
     

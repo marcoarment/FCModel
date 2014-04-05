@@ -46,6 +46,24 @@ static inline void onMainThreadAsync(void (^block)())
     else dispatch_async(dispatch_get_main_queue(), block);
 }
 
+static inline NSArray *class_getSubclasses(Class parentClass) {
+    int numClasses = objc_getClassList(NULL, 0);
+    Class classes[sizeof(Class) * numClasses];
+    numClasses = objc_getClassList(classes, numClasses);
+    NSMutableArray *result = [NSMutableArray array];
+    for (NSInteger i = 0; i < numClasses; i++) {
+        Class superClass = classes[i];
+        do {
+            superClass = class_getSuperclass(superClass);
+        } while (superClass && superClass != parentClass);
+        
+        if (superClass == nil) {
+            continue;
+        }
+        [result addObject:classes[i]];
+    }
+    return result;
+}
 
 @interface FCModelFieldInfo ()
 @property (nonatomic) BOOL nullAllowed;
@@ -972,7 +990,7 @@ static inline void onMainThreadAsync(void (^block)())
        ];
         while ([tablesRS next]) {
             NSString *tableName = [tablesRS stringForColumnIndex:0];
-            Class tableModelClass = NSClassFromString(tableName);
+            Class tableModelClass = [self modelClass:tableName];
             if (! tableModelClass || ! [tableModelClass isSubclassOfClass:self]) continue;
             
             NSString *primaryKeyName = nil;
@@ -1107,6 +1125,27 @@ static inline void onMainThreadAsync(void (^block)())
 }
 
 + (void)inDatabaseSync:(void (^)(FMDatabase *db))block { [g_databaseQueue inDatabase:block]; }
+
+#pragma mark - Custom Mapping Tables
+
++ (Class)modelClass:(NSString *) tableName
+{
+    NSArray *allCreatedModels = class_getSubclasses(self);
+    NSArray *sortedArrayOfString = [allCreatedModels sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+        return [NSStringFromClass(obj1) compare:NSStringFromClass(obj2) options:NSNumericSearch];
+    }];
+    
+    for (Class clazz in sortedArrayOfString) {
+        if ([clazz respondsToSelector:@selector(tableName)]) {
+            NSString *tableNamed = [clazz tableName];
+            
+            if ([tableNamed isEqualToString:tableName]) {
+                return clazz;
+            }
+        }
+    }
+    return NSClassFromString(tableName);
+}
 
 #pragma mark - Batch notification queuing
 
