@@ -9,6 +9,7 @@
 #import <XCTest/XCTest.h>
 #import "FCModel.h"
 #import "SimpleModel.h"
+#import "CustomModel.h"
 
 @interface FCModelTest_Tests : XCTestCase
 
@@ -86,6 +87,23 @@
     XCTAssertEqual(info5.type, FCModelFieldTypeOther);
 }
 
+- (void)testCustomNamingTable
+{
+    CustomModel *customModel = [CustomModel new];
+    customModel.name = @"Model Name";
+    customModel.available = YES;
+    
+    CustomModel *otherModel = [CustomModel new];
+    otherModel.name = @"Other Name";
+    otherModel.available = NO;
+    
+    XCTAssertEqual([customModel save], FCModelSaveSucceeded);
+    XCTAssertTrue(customModel.existsInDatabase);
+    
+    XCTAssertEqual([otherModel save], FCModelSaveSucceeded);
+    XCTAssertTrue(otherModel.existsInDatabase);
+}
+
 #pragma mark - Helper methods
 
 - (void)openDatabase
@@ -107,8 +125,16 @@
                    @"    uniqueID     TEXT PRIMARY KEY,"
                    @"    name         TEXT,"
                    @"    lowercase         text,"
-                   @"    mixedcase         Integer,"
+                   @"    mixedcase         Integer NOT NULL,"
                    @"    typelessTest"
+                   @");"
+                   ]) failedAt(1);
+            
+            if (! [db executeUpdate:
+                   @"CREATE TABLE other_table ("
+                   @"    id     INTEGER PRIMARY KEY,"
+                   @"    name         TEXT,"
+                   @"    available         INTEGER NOT NULL"
                    @");"
                    ]) failedAt(1);
             *schemaVersion = 1;
