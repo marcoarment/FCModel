@@ -70,6 +70,22 @@
     XCTAssertTrue(entity2 != (__bridge SimpleModel *)(e1ptr));
 }
 
+- (void)testMappingFieldInfo
+{
+    SimpleModel *entity = [SimpleModel new];
+    FCModelFieldInfo *info1 = [[entity class] infoForFieldName:@"uniqueID"];
+    FCModelFieldInfo *info2 = [[entity class] infoForFieldName:@"name"];
+    FCModelFieldInfo *info3 = [[entity class] infoForFieldName:@"lowercase"];
+    FCModelFieldInfo *info4 = [[entity class] infoForFieldName:@"mixedcase"];
+    FCModelFieldInfo *info5 = [[entity class] infoForFieldName:@"typelessTest"];
+    
+    XCTAssertEqual(info1.type, FCModelFieldTypeText);
+    XCTAssertEqual(info2.type, FCModelFieldTypeText);
+    XCTAssertEqual(info3.type, FCModelFieldTypeText);
+    XCTAssertEqual(info4.type, FCModelFieldTypeInteger);
+    XCTAssertEqual(info5.type, FCModelFieldTypeOther);
+}
+
 #pragma mark - Helper methods
 
 - (void)openDatabase
@@ -90,6 +106,8 @@
                    @"CREATE TABLE SimpleModel ("
                    @"    uniqueID     TEXT PRIMARY KEY,"
                    @"    name         TEXT,"
+                   @"    lowercase         text,"
+                   @"    mixedcase         Integer,"
                    @"    typelessTest"
                    @");"
                    ]) failedAt(1);
