@@ -102,6 +102,12 @@
     XCTAssertEqual(info5.type, FCModelFieldTypeOther);
 }
 
+- (void)testCustomTableName
+{
+    ModelWithCustomTableName *entity1 = [ModelWithCustomTableName new];
+    XCTAssertNoThrow([entity1 save]);
+}
+
 #pragma mark - Helper methods
 
 - (void)openDatabase
@@ -129,6 +135,15 @@
                    @");"
                    ]) failedAt(1);
             *schemaVersion = 1;
+        }
+        
+        if (*schemaVersion < 2) {
+            if (! [db executeUpdate:
+                   @"CREATE TABLE CustomTableName ("
+                   @"    uniqueID     TEXT PRIMARY KEY"
+                   @");"
+                   ]) failedAt(2);
+            *schemaVersion = 2;
         }
         [db commit];
     }];
