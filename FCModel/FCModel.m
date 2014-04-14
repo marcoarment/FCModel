@@ -716,8 +716,7 @@ static inline void onMainThreadAsync(void (^block)())
 {
     if (! self._rowValuesInDatabase) return;
     [self.unsavedChanges enumerateKeysAndObjectsUsingBlock:^(NSString *fieldName, id obj, BOOL *stop) {
-        id oldValue = self._rowValuesInDatabase[fieldName];
-        if (oldValue) [self setValue:(oldValue == NSNull.null ? nil : oldValue) forKeyPath:fieldName];
+        [self revertUnsavedChangeToFieldName:fieldName];
     }];
 }
 
