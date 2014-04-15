@@ -979,7 +979,7 @@ static inline void onMainThreadAsync(void (^block)())
        ];
         while ([tablesRS next]) {
             NSString *tableName = [tablesRS stringForColumnIndex:0];
-            Class tableModelClass = NSClassFromString(tableName);
+            Class tableModelClass = [self classFromTableName:tableName];
             if (! tableModelClass || ! [tableModelClass isSubclassOfClass:self]) continue;
             
             NSString *primaryKeyName = nil;
@@ -1196,5 +1196,51 @@ static inline void onMainThreadAsync(void (^block)())
         });
     }
 }
+
+NSArray *ClassGetSubclasses(Class parentClass)
+{
+    int numClasses = objc_getClassList(NULL, 0);
+    Class *classes = NULL;
+    
+    classes = (__unsafe_unretained Class *)malloc(sizeof(Class) * numClasses);
+    numClasses = objc_getClassList(classes, numClasses);
+    
+    NSMutableArray *result = [NSMutableArray array];
+    for (NSInteger i = 0; i < numClasses; i++)
+    {
+        Class superClass = classes[i];
+        do
+        {
+            superClass = class_getSuperclass(superClass);
+        } while(superClass && superClass != parentClass);
+        
+        if (superClass == nil)
+        {
+            continue;
+        }
+        
+        [result addObject:classes[i]];
+    }
+    
+    free(classes);
+    
+    return result;
+}
+
++ (Class)classFromTableName:(NSString *)tableName
+{
+    Class class = NSClassFromString(tableName);
+    if (!class) {
+        NSArray *classes = ClassGetSubclasses(self);
+        for (Class subclass in classes) {
+            if ([[subclass tableName] isEqualToString:tableName]) {
+                class = subclass;
+                break;
+            }
+        }
+    }
+    return class;
+}
+
 
 @end
