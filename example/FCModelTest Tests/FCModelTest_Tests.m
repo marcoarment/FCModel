@@ -121,6 +121,26 @@
     XCTAssertTrue(entity.textDefaultNullString && [entity.textDefaultNullString isEqualToString:@"NULL"]);
 }
 
+- (void)testNullableNumberField
+{
+    FCModelFieldInfo *infoDefaultUnspecified = [SimpleModel infoForFieldName:@"nullableNumberDefaultUnspecified"];
+    FCModelFieldInfo *infoDefaultNull = [SimpleModel infoForFieldName:@"nullableNumberDefaultNull"];
+    FCModelFieldInfo *infoDefault1 = [SimpleModel infoForFieldName:@"nullableNumberDefault1"];
+    
+    XCTAssertTrue(infoDefaultUnspecified.nullAllowed);
+    XCTAssertTrue(infoDefaultNull.nullAllowed);
+    XCTAssertTrue(infoDefault1.nullAllowed);
+
+    XCTAssertTrue(infoDefaultUnspecified.defaultValue == nil);
+    XCTAssertTrue(infoDefaultNull.defaultValue == nil);
+    XCTAssertTrue([infoDefault1.defaultValue isEqual:@(1)]);
+    
+    SimpleModel *entity = [SimpleModel new];
+    XCTAssertTrue(entity.nullableNumberDefaultUnspecified == nil);
+    XCTAssertTrue(entity.nullableNumberDefaultNull == nil);
+    XCTAssertTrue([entity.nullableNumberDefault1 isEqual:@(1)]);
+}
+
 #pragma mark - Helper methods
 
 - (void)openDatabase
@@ -145,8 +165,11 @@
                    @"    textDefaultUnspecified TEXT,"
                    @"    textDefaultNullLiteral TEXT DEFAULT NULL,"
                    @"    textDefaultNullString  TEXT DEFAULT 'NULL',"
+                   @"    nullableNumberDefaultUnspecified INTEGER,"
+                   @"    nullableNumberDefaultNull INTEGER DEFAULT NULL,"
+                   @"    nullableNumberDefault1 INTEGER DEFAULT 1,"
                    @"    lowercase         text,"
-                   @"    mixedcase         Integer,"
+                   @"    mixedcase         Integer NOT NULL,"
                    @"    typelessTest"
                    @");"
                    ]) failedAt(1);

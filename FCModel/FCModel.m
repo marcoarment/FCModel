@@ -778,17 +778,7 @@ static inline void onMainThreadAsync(void (^block)())
     NSString *pkName = g_primaryKeyFieldName[self.class];
     id primaryKey = [self encodedValueForFieldName:pkName];
     NSAssert1(primaryKey, @"Cannot update %@ without primary key value", NSStringFromClass(self.class));
-
-    // Validate NOT NULL columns
-    [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(id key, FCModelFieldInfo *info, BOOL *stop) {
-        if (info.nullAllowed) return;
-    
-        id value = [self valueForKey:key];
-        if (! value || value == NSNull.null) {
-            [[NSException exceptionWithName:NSInvalidArgumentException reason:[NSString stringWithFormat:@"Cannot save NULL to NOT NULL property %@.%@", tableName, key] userInfo:nil] raise];
-        }
-    }];
-    
+   
     if (update) {
         if (! [self shouldUpdate]) {
             [self saveWasRefused];
@@ -804,6 +794,16 @@ static inline void onMainThreadAsync(void (^block)())
         [columnNamesMinusPK removeObject:pkName];
         columnNames = [columnNamesMinusPK allObjects];
     }
+
+    // Validate NOT NULL columns
+    [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(id key, FCModelFieldInfo *info, BOOL *stop) {
+        if (info.nullAllowed) return;
+    
+        id value = [self valueForKey:key];
+        if (! value || value == NSNull.null) {
+            [[NSException exceptionWithName:NSInvalidArgumentException reason:[NSString stringWithFormat:@"Cannot save NULL to NOT NULL property %@.%@", tableName, key] userInfo:nil] raise];
+        }
+    }];
 
     values = [NSMutableArray arrayWithCapacity:columnNames.count];
     [columnNames enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
@@ -1033,26 +1033,30 @@ static inline void onMainThreadAsync(void (^block)())
                     info.nullAllowed = NO;
                 }
                 
+                BOOL defaultNull = isPK || [columnsRS columnIndexIsNull:4] || [[columnsRS stringForColumnIndex:4] isEqualToString:@"NULL"];
+                
                 // Type-parsing algorithm from SQLite's column-affinity rules: http://www.sqlite.org/datatype3.html
                 // except the addition of BOOL as its own recognized type
                 // parse case insensitive schema
                 if ([fieldType rangeOfString:@"INT" options:NSCaseInsensitiveSearch].location != NSNotFound) {
                     info.type = FCModelFieldTypeInteger;
-                    if ([fieldType rangeOfString:@"UNSIGNED" options:NSCaseInsensitiveSearch].location != NSNotFound) {
+                    if (defaultNull) {
+                        info.defaultValue = nil;
+                    } else if ([fieldType rangeOfString:@"UNSIGNED" options:NSCaseInsensitiveSearch].location != NSNotFound) {
                         info.defaultValue = [NSNumber numberWithUnsignedLongLong:[columnsRS unsignedLongLongIntForColumnIndex:4]];
                     } else {
                         info.defaultValue = [NSNumber numberWithLongLong:[columnsRS longLongIntForColumnIndex:4]];
                     }
                 } else if ([fieldType rangeOfString:@"BOOL" options:NSCaseInsensitiveSearch].location != NSNotFound) {
                     info.type = FCModelFieldTypeBool;
-                    info.defaultValue = [NSNumber numberWithBool:[columnsRS boolForColumnIndex:4]];
+                    info.defaultValue = defaultNull ? nil : [NSNumber numberWithBool:[columnsRS boolForColumnIndex:4]];
                 } else if (
                     [fieldType rangeOfString:@"TEXT" options:NSCaseInsensitiveSearch].location != NSNotFound ||
                     [fieldType rangeOfString:@"CHAR" options:NSCaseInsensitiveSearch].location != NSNotFound ||
                     [fieldType rangeOfString:@"CLOB" options:NSCaseInsensitiveSearch].location != NSNotFound
                 ) {
                     info.type = FCModelFieldTypeText;
-                    info.defaultValue = [[[columnsRS stringForColumnIndex:4]
+                    info.defaultValue = defaultNull ? nil : [[[columnsRS stringForColumnIndex:4]
                         stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"'"]]
                         stringByReplacingOccurrencesOfString:@"''" withString:@"'"
                     ];
@@ -1062,15 +1066,12 @@ static inline void onMainThreadAsync(void (^block)())
                     [fieldType rangeOfString:@"DOUB" options:NSCaseInsensitiveSearch].location != NSNotFound
                 ) {
                     info.type = FCModelFieldTypeDouble;
-                    info.defaultValue = [NSNumber numberWithDouble:[columnsRS doubleForColumnIndex:4]];
+                    info.defaultValue = defaultNull ? nil : [NSNumber numberWithDouble:[columnsRS doubleForColumnIndex:4]];
                 } else {
                     info.type = FCModelFieldTypeOther;
                     info.defaultValue = nil;
                 }
                 
-                if (isPK) info.defaultValue = nil;
-                else if ([[columnsRS stringForColumnIndex:4] isEqualToString:@"NULL"]) info.defaultValue = nil;
-
                 [fields setObject:info forKey:fieldName];
             }
             
