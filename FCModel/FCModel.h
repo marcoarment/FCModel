@@ -239,6 +239,18 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 //
 + (BOOL)closeDatabase;
 
+// If you try to use FCModel while the database is closed, an error will be logged to the console on any relevant calls.
+// Read/info/SELECT methods will return nil when possible, but these will throw exceptions:
+//  -save
+//  +saveAll
+//  -delete
+//  -executeUpdateQuery:
+//  -inDatabaseSync:
+//
+// You can determine if the database is currently open:
+//
++ (BOOL)databaseIsOpen;
+
 @end
 
 

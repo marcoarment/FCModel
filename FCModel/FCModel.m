@@ -46,6 +46,15 @@ static inline void onMainThreadAsync(void (^block)())
     else dispatch_async(dispatch_get_main_queue(), block);
 }
 
+static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
+{
+    if (! g_databaseQueue) {
+        if (fatal) NSCAssert(0, @"[FCModel] Database is closed");
+        else NSLog(@"[FCModel] Warning: Attempting to access database while closed. Open it first.");
+        return NO;
+    }
+    return YES;
+}
 
 @interface FCModelFieldInfo ()
 @property (nonatomic) BOOL nullAllowed;
@@ -119,6 +128,8 @@ static inline void onMainThreadAsync(void (^block)())
 
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue databaseRowValues:(NSDictionary *)fieldValues createIfNonexistent:(BOOL)create
 {
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+
     if (! primaryKeyValue || primaryKeyValue == NSNull.null) return [self new];
     [self uniqueMapInit];
     
@@ -259,9 +270,9 @@ static inline void onMainThreadAsync(void (^block)())
     }
 }
 
-+ (NSArray *)databaseFieldNames     { return [g_fieldInfo[self] allKeys]; }
-+ (NSString *)primaryKeyFieldName { return g_primaryKeyFieldName[self]; }
-+ (FCModelFieldInfo *)infoForFieldName:(NSString *)fieldName { return g_fieldInfo[self][fieldName]; }
++ (NSArray *)databaseFieldNames     { return checkForOpenDatabaseFatal(NO) ? [g_fieldInfo[self] allKeys] : nil; }
++ (NSString *)primaryKeyFieldName   { return checkForOpenDatabaseFatal(NO) ? g_primaryKeyFieldName[self] : nil; }
++ (FCModelFieldInfo *)infoForFieldName:(NSString *)fieldName { return checkForOpenDatabaseFatal(NO) ? g_fieldInfo[self][fieldName] : nil; }
 
 // For unique-instance consistency:
 // Resolve discrepancies between supplied primary-key value type and the column type that comes out of the database.
@@ -289,16 +300,20 @@ static inline void onMainThreadAsync(void (^block)())
 
 + (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments
 {
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
     return [FCModelLiveResultArray arrayWithModelClass:self queryAfterWHERE:queryAfterWHERE arguments:arguments].allObjects;
 }
 
 + (id)cachedObjectWithIdentifier:(id)identifier generator:(id (^)(void))generatorBlock
 {
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
     return [FCModelCachedObject objectWithModelClass:self cacheIdentifier:identifier generator:generatorBlock].value;
 }
 
 + (NSError *)executeUpdateQuery:(NSString *)query, ...
 {
+    checkForOpenDatabaseFatal(YES);
+
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
     va_start(args, query);
@@ -317,6 +332,8 @@ static inline void onMainThreadAsync(void (^block)())
 
 + (id)_instancesWhere:(NSString *)query andArgs:(va_list)args orArgsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
 {
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+
     NSMutableArray *instances;
     NSMutableDictionary *keyedInstances;
     __block FCModel *instance = nil;
@@ -421,6 +438,8 @@ static inline void onMainThreadAsync(void (^block)())
 
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
 {
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+    
     if (primaryKeyValues.count == 0) return @[];
     
     __block int maxParameterCount = 0;
@@ -489,6 +508,8 @@ static inline void onMainThreadAsync(void (^block)())
 
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...
 {
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+
     NSMutableArray *columnArray = [NSMutableArray array];
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
@@ -505,6 +526,8 @@ static inline void onMainThreadAsync(void (^block)())
 
 + (NSArray *)resultDictionariesFromQuery:(NSString *)query, ...
 {
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+
     NSMutableArray *rows = [NSMutableArray array];
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
@@ -521,6 +544,8 @@ static inline void onMainThreadAsync(void (^block)())
 
 + (id)firstValueFromQuery:(NSString *)query, ...
 {
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+
     __block id firstValue = nil;
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
@@ -544,8 +569,10 @@ static inline void onMainThreadAsync(void (^block)())
 
 + (id)primaryKeyValueForNewInstance
 {
+    BOOL databaseIsOpen = checkForOpenDatabaseFatal(NO);
+    
     // Emulation for old AUTOINCREMENT tables
-    if (g_tablesUsingAutoIncrementEmulation && [g_tablesUsingAutoIncrementEmulation containsObject:NSStringFromClass(self)]) {
+    if (databaseIsOpen && g_tablesUsingAutoIncrementEmulation && [g_tablesUsingAutoIncrementEmulation containsObject:NSStringFromClass(self)]) {
         id largestNumber = [self firstValueFromQuery:@"SELECT MAX($PK) FROM $T"];
         int64_t largestExistingValue = largestNumber && largestNumber != NSNull.null ? ((NSNumber *) largestNumber).longLongValue : 0;
 
@@ -631,6 +658,8 @@ static inline void onMainThreadAsync(void (^block)())
 
 - (void)saveByNotification:(NSNotification *)n
 {
+    if (! checkForOpenDatabaseFatal(NO)) return;
+    
     if (deleted) return;
     Class targetedClass = n.userInfo[FCModelClassKey];
     if (targetedClass && ! [self isKindOfClass:targetedClass]) return;
@@ -639,6 +668,8 @@ static inline void onMainThreadAsync(void (^block)())
 
 - (void)reload:(NSNotification *)n
 {
+    if (! checkForOpenDatabaseFatal(NO)) return;
+
     Class targetedClass = n.userInfo[FCModelClassKey];
     if (targetedClass && ! [self isKindOfClass:targetedClass]) return;
     if (! self.existsInDatabase) return;
@@ -764,6 +795,8 @@ static inline void onMainThreadAsync(void (^block)())
 
 - (FCModelSaveResult)save
 {
+    checkForOpenDatabaseFatal(YES);
+    
     if (deleted) [[NSException exceptionWithName:@"FCAttemptToSaveAfterDelete" reason:@"Cannot save deleted instance" userInfo:nil] raise];
     
     NSDictionary *changes = self.unsavedChanges;
@@ -875,6 +908,8 @@ static inline void onMainThreadAsync(void (^block)())
 
 - (FCModelSaveResult)delete
 {
+    checkForOpenDatabaseFatal(YES);
+    
     if (deleted) return FCModelSaveNoChanges;
     if (! [self shouldDelete]) {
         [self saveWasRefused];
@@ -905,6 +940,7 @@ static inline void onMainThreadAsync(void (^block)())
 
 + (void)saveAll
 {
+    checkForOpenDatabaseFatal(YES);
     [NSNotificationCenter.defaultCenter postNotificationName:FCModelSaveNotification object:nil userInfo:@{ FCModelClassKey : self }];
 }
 
@@ -1116,7 +1152,13 @@ static inline void onMainThreadAsync(void (^block)())
     return ! modelsAreStillLoaded;
 }
 
-+ (void)inDatabaseSync:(void (^)(FMDatabase *db))block { [g_databaseQueue inDatabase:block]; }
++ (BOOL)databaseIsOpen { return (BOOL) g_databaseQueue; }
+
++ (void)inDatabaseSync:(void (^)(FMDatabase *db))block
+{
+    checkForOpenDatabaseFatal(YES);
+    [g_databaseQueue inDatabase:block];
+}
 
 #pragma mark - Batch notification queuing
 

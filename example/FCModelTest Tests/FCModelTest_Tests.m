@@ -63,7 +63,12 @@
     }
     
     XCTAssertTrue([FCModel closeDatabase]);
+    XCTAssertTrue(! [FCModel databaseIsOpen]);
+    XCTAssertTrue([SimpleModel instanceWithPrimaryKey:@"a"] == nil);
+    XCTAssertThrows([SimpleModel executeUpdateQuery:@"UPDATE $T SET name = 'bogus'"]);
+
     [self openDatabase];
+    XCTAssertTrue([FCModel databaseIsOpen]);
     
     SimpleModel *entity2 = [SimpleModel instanceWithPrimaryKey:@"a"];
     XCTAssertTrue(entity2.existsInDatabase);
