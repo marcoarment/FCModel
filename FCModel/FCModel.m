@@ -90,8 +90,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 #pragma mark - For subclasses to override
 
-+ (NSString *)tableName { return NSStringFromClass(self); }
-
 - (void)didInit { }
 - (BOOL)shouldInsert { return YES; }
 - (BOOL)shouldUpdate { return YES; }
@@ -807,7 +805,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSArray *columnNames;
     NSMutableArray *values;
     
-    NSString *tableName = self.class.tableName;
+    NSString *tableName = NSStringFromClass(self.class);
     NSString *pkName = g_primaryKeyFieldName[self.class];
     id primaryKey = [self encodedValueForFieldName:pkName];
     NSAssert1(primaryKey, @"Cannot update %@ without primary key value", NSStringFromClass(self.class));
@@ -952,7 +950,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 {
     if (self == FCModel.class) return query;
     query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
-    return [query stringByReplacingOccurrencesOfString:@"$T" withString:self.tableName];
+    return [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
 }
 
 - (NSString *)description
