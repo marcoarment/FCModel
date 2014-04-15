@@ -102,6 +102,25 @@
     XCTAssertEqual(info5.type, FCModelFieldTypeOther);
 }
 
+- (void)testFieldDefaultNull
+{
+    FCModelFieldInfo *fieldInfoUnspecified = [SimpleModel infoForFieldName:@"textDefaultUnspecified"];
+    FCModelFieldInfo *fieldInfoNullLiteral = [SimpleModel infoForFieldName:@"textDefaultNullLiteral"];
+    FCModelFieldInfo *fieldInfoNullString = [SimpleModel infoForFieldName:@"textDefaultNullString"];
+    
+    XCTAssertTrue(fieldInfoUnspecified.nullAllowed);
+    XCTAssertTrue(fieldInfoNullLiteral.nullAllowed);
+    XCTAssertTrue(fieldInfoNullString.nullAllowed);
+    XCTAssertTrue(fieldInfoUnspecified.defaultValue == nil);
+    XCTAssertTrue(fieldInfoNullLiteral.defaultValue == nil);
+    XCTAssertTrue([fieldInfoNullString.defaultValue isEqualToString:@"NULL"]);
+    
+    SimpleModel *entity = [SimpleModel new];
+    XCTAssertTrue(entity.textDefaultUnspecified == nil);
+    XCTAssertTrue(entity.textDefaultNullLiteral == nil);
+    XCTAssertTrue(entity.textDefaultNullString && [entity.textDefaultNullString isEqualToString:@"NULL"]);
+}
+
 #pragma mark - Helper methods
 
 - (void)openDatabase
@@ -123,6 +142,9 @@
                    @"    uniqueID     TEXT PRIMARY KEY,"
                    @"    name         TEXT,"
                    @"    date         DATETIME,"
+                   @"    textDefaultUnspecified TEXT,"
+                   @"    textDefaultNullLiteral TEXT DEFAULT NULL,"
+                   @"    textDefaultNullString  TEXT DEFAULT 'NULL',"
                    @"    lowercase         text,"
                    @"    mixedcase         Integer,"
                    @"    typelessTest"

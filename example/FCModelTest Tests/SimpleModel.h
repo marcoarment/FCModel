@@ -16,5 +16,8 @@
 @property (nonatomic) id typelessTest;
 @property (nonatomic) NSString *lowercase;
 @property (nonatomic) NSInteger mixedcase;
+@property (nonatomic) NSString *textDefaultUnspecified;
+@property (nonatomic) NSString *textDefaultNullString;
+@property (nonatomic) NSString *textDefaultNullLiteral;
 
 @end
