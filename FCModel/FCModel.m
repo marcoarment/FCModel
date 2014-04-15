@@ -1067,10 +1067,17 @@ static inline void onMainThreadAsync(void (^block)())
                     info.type = FCModelFieldTypeOther;
                     info.defaultValue = nil;
                 }
-                
-                if (isPK) info.defaultValue = nil;
-                else if ([[columnsRS stringForColumnIndex:4] isEqualToString:@"NULL"]) info.defaultValue = nil;
 
+                if(isPK)
+		{
+                    info.defaultValue = nil;
+		}
+                else
+		{
+                    if ([[columnsRS stringForColumnIndex:4] isEqualToString:@"NULL"]) info.defaultValue = nil;
+                    if ([columnsRS columnIndexIsNull:4]) info.defaultValue = nil;
+		}
+                
                 [fields setObject:info forKey:fieldName];
             }
             
