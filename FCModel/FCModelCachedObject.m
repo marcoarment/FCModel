@@ -11,7 +11,8 @@
 #pragma mark - Global cache
 
 @interface FCModelGeneratedObjectCache : NSObject
-@property (nonatomic) NSCache *cache;
+@property (nonatomic) NSMutableDictionary *cache;
+@property (nonatomic) dispatch_queue_t cacheQueue;
 
 + (instancetype)sharedInstance;
 - (void)clear:(id)sender;
@@ -35,7 +36,8 @@
 - (instancetype)init
 {
     if ( (self = [super init]) ) {
-        self.cache = [[NSCache alloc] init];
+        self.cacheQueue = dispatch_queue_create("FCModelGeneratedObjectCache", NULL);
+        self.cache = [NSMutableDictionary dictionary];
 #if TARGET_OS_IPHONE
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(clear:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
 #endif
@@ -47,27 +49,39 @@
 - (void)dealloc
 {
     [NSNotificationCenter.defaultCenter removeObserver:self name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+    [self clear:nil];
 }
 #endif
 
-- (void)clear:(id)sender { [self.cache removeAllObjects]; }
+- (void)clear:(id)sender
+{
+    dispatch_sync(self.cacheQueue, ^{
+        [self.cache removeAllObjects];
+    });
+}
 
 - (void)saveObject:(FCModelCachedObject *)obj class:(Class)fcModelClass identifier:(id)identifier
 {
-    NSCache *classCache = [self.cache objectForKey:fcModelClass];
-    if (! classCache) {
-        classCache = [[NSCache alloc] init];
-        [self.cache setObject:classCache forKey:fcModelClass];
-    }
-    
-    [classCache setObject:obj forKey:identifier];
+    dispatch_sync(self.cacheQueue, ^{
+        NSMutableDictionary *classCache = self.cache[fcModelClass];
+        if (! classCache) {
+            classCache = [NSMutableDictionary dictionary];
+            self.cache[(id)fcModelClass] = classCache;
+        }
+        
+        classCache[identifier] = obj;
+    });
 }
 
 - (FCModelCachedObject *)objectWithModelClass:(Class)fcModelClass identifier:(id)identifier
 {
-    NSCache *classCache = [self.cache objectForKey:fcModelClass];
-    if (! classCache) return nil;
-    return [classCache objectForKey:identifier];
+    __block FCModelCachedObject *result = nil;
+    dispatch_sync(self.cacheQueue, ^{
+        NSMutableDictionary *classCache = self.cache[fcModelClass];
+        if (! classCache) return;
+        result = classCache[identifier];
+    });
+    return result;
 }
 
 @end
