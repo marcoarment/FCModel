@@ -128,7 +128,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
 
-    if (! primaryKeyValue || primaryKeyValue == NSNull.null) return [self new];
+    if (! primaryKeyValue || primaryKeyValue == NSNull.null) {
+        return (create ? [self new] : nil);
+    }
     [self uniqueMapInit];
     
     primaryKeyValue = [self normalizedPrimaryKeyValue:primaryKeyValue];
