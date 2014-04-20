@@ -97,6 +97,7 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 - (void)revertUnsavedChangeToFieldName:(NSString *)fieldName;
 - (FCModelSaveResult)delete;
 - (FCModelSaveResult)save;
++ (void)deleteAll;
 + (void)saveAll; // Resolved by class: call on FCModel to save all, on a subclass to save just those and their subclasses, etc.
 
 // SELECTs
