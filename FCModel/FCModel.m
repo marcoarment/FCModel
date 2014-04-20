@@ -18,6 +18,7 @@
 NSString * const FCModelInsertNotification = @"FCModelInsertNotification";
 NSString * const FCModelUpdateNotification = @"FCModelUpdateNotification";
 NSString * const FCModelDeleteNotification = @"FCModelDeleteNotification";
+NSString * const FCModelDeleteAllNotification = @"FCModelDeleteAllNotification";
 NSString * const FCModelInstanceSetKey = @"FCModelInstanceSetKey";
 
 NSString * const FCModelAnyChangeNotification = @"FCModelAnyChangeNotification";
@@ -607,6 +608,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     if ( (self = [super init]) ) {
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(reload:) name:FCModelReloadNotification object:nil];
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(saveByNotification:) name:FCModelSaveNotification object:nil];
+        [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(deleteByNotification:) name:FCModelDeleteAllNotification object:nil];
         existsInDatabase = existsInDB;
         deleted = NO;
         
@@ -654,6 +656,20 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         [self didInit];
     }
     return self;
+}
+
+- (void)deleteByNotification:(NSNotification *)n
+{
+    if (deleted) return;
+    Class targetedClass = n.userInfo[FCModelClassKey];
+    if (targetedClass && ! [self isKindOfClass:targetedClass]) return;
+    
+    deleted = YES;
+    existsInDatabase = NO;
+    [self didDelete];
+    [self postChangeNotification:FCModelDeleteNotification];
+    [self postChangeNotification:FCModelAnyChangeNotification];
+    [self removeUniqueInstance];
 }
 
 - (void)saveByNotification:(NSNotification *)n
@@ -936,6 +952,19 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     [self removeUniqueInstance];
     
     return FCModelSaveSucceeded;
+}
+
++ (void)deleteAll
+{
+    __block BOOL success = NO;
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        NSString *query = [self.class expandQuery:@"DELETE FROM \"$T\""];
+        success = [db executeUpdate:query];
+    }];
+    
+    if (success) {
+        [NSNotificationCenter.defaultCenter postNotificationName:FCModelDeleteAllNotification object:nil userInfo:@{ FCModelClassKey : self }];
+    }
 }
 
 + (void)saveAll
