@@ -793,6 +793,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return [changes copy];
 }
 
+- (NSArray *)changedFieldNames { return self.unsavedChanges.allKeys; }
+
 - (FCModelSaveResult)save
 {
     checkForOpenDatabaseFatal(YES);
