@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = 'FCModel'
-  s.version = '0.2.0'
+  s.version = '0.9.0'
   s.summary = 'An alternative to Core Data for people who like having direct SQL access.'
   s.homepage = 'https://github.com/marcoarment/FCModel'
   s.license = { :type => 'MIT', :file => 'LICENSE' }
