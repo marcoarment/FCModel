@@ -146,6 +146,31 @@
     XCTAssertTrue([entity.nullableNumberDefault1 isEqual:@(1)]);
 }
 
+- (void)testKeyedInstancesType
+{
+    SimpleModel *entity1 = [SimpleModel instanceWithPrimaryKey:@"w"];
+    entity1.name = @"Waudru";
+    [entity1 save];
+    
+    id result = nil;
+    
+    result = [SimpleModel keyedAllInstances];
+    XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
+    
+    [SimpleModel inDatabaseSync:^(FMDatabase *db) {
+        FMResultSet *r = [db executeQuery:@"SELECT * FROM SimpleModel"];
+        id result = [SimpleModel keyedInstancesFromResultSet:r];
+        XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
+        [r close];
+    }];
+    
+    result = [SimpleModel keyedInstancesWhere:@"name = 'Waudru'"];
+    XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
+    
+    result = [SimpleModel keyedInstancesWithPrimaryKeyValues:@[@"w"]];
+    XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
+}
+
 #pragma mark - Helper methods
 
 - (void)openDatabase
