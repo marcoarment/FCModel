@@ -166,31 +166,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return instance;
 }
 
-- (void)registerUniqueInstance
-{
-    id primaryKeyValue = self.primaryKey;
-    if (! primaryKeyValue || primaryKeyValue == NSNull.null) return;
-    [self.class uniqueMapInit];
-
-    dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
-    NSMapTable *classCache = g_instances[self.class];
-    if (! classCache) classCache = g_instances[(id) self.class] = [NSMapTable strongToWeakObjectsMapTable];
-    [classCache setObject:self forKey:primaryKeyValue];
-    dispatch_semaphore_signal(g_instancesReadLock);
-}
-
-- (void)removeUniqueInstance
-{
-    id primaryKeyValue = self.primaryKey;
-    if (! primaryKeyValue || primaryKeyValue == NSNull.null) return;
-    [self.class uniqueMapInit];
-    
-    dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
-    NSMapTable *classCache = g_instances[self.class];
-    [classCache removeObjectForKey:primaryKeyValue];
-    dispatch_semaphore_signal(g_instancesReadLock);
-}
-
 + (instancetype)instanceFromDatabaseWithPrimaryKey:(id)key
 {
     __block FCModel *model = NULL;
@@ -936,7 +911,15 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     [self didDelete];
     [self postChangeNotification:FCModelDeleteNotification];
     [self postChangeNotification:FCModelAnyChangeNotification];
-    [self removeUniqueInstance];
+
+    // Remove instance from unique map
+    id primaryKeyValue = self.primaryKey;
+    if (g_instances && primaryKeyValue && primaryKeyValue != NSNull.null) {
+        dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
+        NSMapTable *classCache = g_instances[self.class];
+        [classCache removeObjectForKey:primaryKeyValue];
+        dispatch_semaphore_signal(g_instancesReadLock);
+    }
     
     return FCModelSaveSucceeded;
 }
