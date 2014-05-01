@@ -386,7 +386,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 {
     va_list args;
     va_start(args, query);
-    NSDictionary *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
+    NSDictionary *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES];
     va_end(args);
     return results;
 }
