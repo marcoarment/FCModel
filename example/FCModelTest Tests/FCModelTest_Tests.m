@@ -51,6 +51,19 @@
     XCTAssertTrue(entity2 == entity1);
 }
 
+- (void)testUniqueMapIssue65
+{
+    SimpleModel *newlyCreated = [SimpleModel new];
+    newlyCreated.name = @"123";
+    [newlyCreated save];
+
+    NSArray *array = [SimpleModel instancesWhere:@"name == ?", @"123"];
+    XCTAssertTrue(array.count == 1, @"More than 1 element");
+
+    SimpleModel *first = [array firstObject];
+    XCTAssertTrue(newlyCreated == first, @"%@ and %@ are different objects!", newlyCreated, first);
+}
+
 - (void)testDatabaseCloseFlushesCache
 {
     void *e1ptr;
