@@ -267,5 +267,6 @@ typedef NS_ENUM(NSInteger, FCModelFieldType) {
 @property (nonatomic, readonly) FCModelFieldType type;
 @property (nonatomic, readonly) id defaultValue;
 @property (nonatomic, readonly) Class propertyClass;
+@property (nonatomic, readonly) NSString *propertyTypeEncoding;
 @end
 

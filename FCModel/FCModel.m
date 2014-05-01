@@ -61,6 +61,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 @property (nonatomic) FCModelFieldType type;
 @property (nonatomic) id defaultValue;
 @property (nonatomic) Class propertyClass;
+@property (nonatomic) NSString *propertyTypeEncoding;
 @end
 
 @implementation FCModelFieldInfo
@@ -1064,6 +1065,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 NSString *fieldType = [columnsRS stringForColumnIndex:2];
                 FCModelFieldInfo *info = [FCModelFieldInfo new];
                 info.propertyClass = propertyClass;
+                info.propertyTypeEncoding = [typeString substringFromIndex:1];
                 info.nullAllowed = ! [columnsRS boolForColumnIndex:3];
                 
                 if (! isPK && info.nullAllowed && ! propertyClass) {
