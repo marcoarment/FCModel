@@ -1229,7 +1229,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 {
     BOOL enqueued = NO;
     
-    dispatch_semaphore_t lock = [instance.class notificationBatchLock];
+    dispatch_semaphore_t lock = [self notificationBatchLock];
     dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
     if (g_enqueuedBatchNotifications) {
         id class = instance.class;

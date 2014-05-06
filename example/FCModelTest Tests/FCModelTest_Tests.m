@@ -469,6 +469,17 @@
     for (id observer in observers) [nc removeObserver:observer];
 }
 
+- (void)testUpdateWithoutLoadedInstances
+{
+    __block int notifications = 0;
+    id observer = [NSNotificationCenter.defaultCenter addObserverForName:FCModelAnyChangeNotification object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) {
+        notifications++;
+    }];
+
+    [SimplerModel dataWasUpdatedExternally];
+    XCTAssert(notifications == 1, @"Update without loaded instances got %d notifications", notifications);
+    [NSNotificationCenter.defaultCenter removeObserver:observer];
+}
 
 
 #pragma mark - Helper methods
