@@ -95,6 +95,7 @@
 @property (nonatomic, copy) id (^generator)(void);
 @property (nonatomic) BOOL currentResultIsValid;
 @property (nonatomic) id currentResult;
+@property (nonatomic) NSSet *ignoredFieldsForInvalidation;
 
 @end
 
@@ -107,12 +108,18 @@
 
 + (instancetype)objectWithModelClass:(Class)fcModelClass cacheIdentifier:(id)identifier generator:(id (^)(void))generatorBlock
 {
+    return [self objectWithModelClass:fcModelClass cacheIdentifier:identifier ignoreFieldsForInvalidation:nil generator:generatorBlock];
+}
+
++ (instancetype)objectWithModelClass:(Class)fcModelClass cacheIdentifier:(id)identifier ignoreFieldsForInvalidation:(NSSet *)ignoredFields generator:(id (^)(void))generatorBlock
+{
     FCModelCachedObject *obj = [FCModelGeneratedObjectCache.sharedInstance objectWithModelClass:fcModelClass identifier:identifier];
 
     if (! obj) {
         obj = [[FCModelCachedObject alloc] init];
         obj.modelClass = fcModelClass;
         obj.generator = generatorBlock;
+        obj.ignoredFieldsForInvalidation = ignoredFields;
 
         [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(dataSourceChanged:) name:FCModelWillReloadNotification object:fcModelClass];
         [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(dataSourceChanged:) name:FCModelAnyChangeNotification object:fcModelClass];
@@ -138,7 +145,16 @@
 
 - (void)dataSourceChanged:(NSNotification *)n
 {
-    if (n.object == nil || n.object == self.modelClass) [self flush:n];
+    if (n.object != nil && n.object != self.modelClass) return;
+    
+    NSSet *changedFields, *ignoredFields = self.ignoredFieldsForInvalidation;
+    if (ignoredFields && (changedFields = n.userInfo[FCModelChangedFieldsKey]) ) {
+        NSMutableSet *fieldsWeCareAbout = [changedFields mutableCopy];
+        [fieldsWeCareAbout minusSet:ignoredFields];
+        if (fieldsWeCareAbout.count == 0) return;
+    }
+    
+    [self flush:n];
 }
 
 - (void)flush:(NSNotification *)n
@@ -168,11 +184,11 @@
 
 @implementation FCModelLiveResultArray
 
-+ (instancetype)arrayWithModelClass:(Class)fcModelClass queryAfterWHERE:(NSString *)query arguments:(NSArray *)arguments
++ (instancetype)arrayWithModelClass:(Class)fcModelClass queryAfterWHERE:(NSString *)query arguments:(NSArray *)arguments ignoreFieldsForInvalidation:(NSSet *)ignoredFields
 {
     FCModelLiveResultArray *set = [self new];
     
-    set.cachedObject = [FCModelCachedObject objectWithModelClass:fcModelClass cacheIdentifier:@[(query ?: NSNull.null), (arguments ?: NSNull.null)] generator:^id{
+    set.cachedObject = [FCModelCachedObject objectWithModelClass:fcModelClass cacheIdentifier:@[(query ?: NSNull.null), (arguments ?: NSNull.null)] ignoreFieldsForInvalidation:ignoredFields generator:^id{
         return query ? [fcModelClass instancesWhere:query arguments:arguments] : [fcModelClass allInstances];
     }];
 

@@ -141,12 +141,14 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 
 // These methods use a global query cache (in FCModelCachedObject). Results are cached indefinitely until their
 //  table has any writes or there's a system low-memory warning, at which point they automatically invalidate.
+//  You can customize whether invalidations are triggered with the optional ignoreFieldsForInvalidation: params.
 // The next subsequent request will repopulate the cached data, either by querying the DB (cachedInstancesWhere)
 //  or calling the generator block (cachedObjectWithIdentifier).
 //
 + (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
++ (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments ignoreFieldsForInvalidation:(NSSet *)ignoredFields;
 + (id)cachedObjectWithIdentifier:(id)identifier generator:(id (^)(void))generatorBlock;
-
++ (id)cachedObjectWithIdentifier:(id)identifier ignoreFieldsForInvalidation:(NSSet *)ignoredFields generator:(id (^)(void))generatorBlock;
 
 // For subclasses to override, all optional:
 

@@ -9,7 +9,8 @@
 
 @interface FCModelCachedObject : NSObject
 
-+ (instancetype)objectWithModelClass:(Class)fcModelClass cacheIdentifier:(id)identifier generator:(id (^)(void))generatorBlock;
++ (instancetype)objectWithModelClass:(Class)fcModelClass cacheIdentifier:(id)identifier ignoreFieldsForInvalidation:(NSSet *)ignoredFields generator:(id (^)(void))generatorBlock;
+
 @property (readonly) id value;
 
 + (void)clearCache;
@@ -26,7 +27,7 @@
 
 @interface FCModelLiveResultArray : NSObject
 
-+ (instancetype)arrayWithModelClass:(Class)fcModelClass queryAfterWHERE:(NSString *)query arguments:(NSArray *)arguments;
++ (instancetype)arrayWithModelClass:(Class)fcModelClass queryAfterWHERE:(NSString *)query arguments:(NSArray *)arguments ignoreFieldsForInvalidation:(NSSet *)ignoredFields;
 - (NSArray *)allObjects;
 
 @end
