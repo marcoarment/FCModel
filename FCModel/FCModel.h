@@ -20,25 +20,30 @@
 //
 //  [NSNotificationCenter.defaultCenter addObserver:... selector:... name:FCModelUpdateNotification object:Person.class];
 //
-// The specific instance or instances acted upon are passed as an NSSet in userInfo[FCModelInstanceSetKey].
-// The set will always contain exactly one instance unless you use beginNotificationBatch/endNotificationBatchAndNotify.
+// Or set object to nil to get notified of operations to all FCModels.
 //
 extern NSString * const FCModelInsertNotification;
 extern NSString * const FCModelUpdateNotification;
 extern NSString * const FCModelDeleteNotification;
-extern NSString * const FCModelInstanceSetKey;
-
-// Like the above with using the Class as the object, except that this one doesn't get a set of changed instances,
-//  fires on any insert, update, or delete, and also fires after calls to dataWasUpdatedExternally and executeUpdateQuery:.
-// If you find yourself subscribing to all three insert/update/delete notifications to do something like reload a tableview,
-//  this is probably what you want instead.
+extern NSString * const FCModelAnyChangeNotification; // Any insert, update, delete, dataWasUpdatedExternally, or executeUpdateQuery:.
 //
-extern NSString * const FCModelAnyChangeNotification;
+// userInfo[FCModelInstanceSetKey] is an NSSet containing the specific FCModel instance(s) acted upon.
+// The set will always contain exactly one instance, except:
+//  - If you use begin/endNotificationBatchAndNotify, it will contain all instances that received the notification during the batch.
+//  - For dataWasUpdatedExternally/executeUpdateQuery:, it will contain all loaded instances of the class.
+//
+extern NSString * const FCModelInstanceSetKey;
+//
+// userInfo[FCModelChangedFieldsByInstanceKey] is an NSSet of NSString field names.
+// "Changed" field names may be overly inclusive: all named fields may not *actually* have changed, but all actual changes will be in the set.
+//
+extern NSString * const FCModelChangedFieldsKey;
 
 
 // During dataWasUpdatedExternally and executeUpdateQuery:, this is called immediately before FCModel tells all loaded
 //  instances of the affected class to reload themselves. Reloading can be time-consuming if many instances are in memory,
 //  so this is a good time to release any unnecessarily retained instances so they don't need to go through the reload.
+// The notification's object is the affected class.
 //
 // (You probably don't need to care about this. Until you do.)
 //

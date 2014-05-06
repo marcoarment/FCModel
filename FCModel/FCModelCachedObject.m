@@ -114,10 +114,8 @@
         obj.modelClass = fcModelClass;
         obj.generator = generatorBlock;
 
-        [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(flush:) name:FCModelWillReloadNotification object:FCModel.class];
-        [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(flush:) name:FCModelWillReloadNotification object:fcModelClass];
-        [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(flush:) name:FCModelAnyChangeNotification object:FCModel.class];
-        [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(flush:) name:FCModelAnyChangeNotification object:fcModelClass];
+        [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(dataSourceChanged:) name:FCModelWillReloadNotification object:fcModelClass];
+        [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(dataSourceChanged:) name:FCModelAnyChangeNotification object:fcModelClass];
 
 #if TARGET_OS_IPHONE
         [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(flush:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
@@ -130,14 +128,17 @@
 
 - (void)dealloc
 {
-    [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelWillReloadNotification object:FCModel.class];
     [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelWillReloadNotification object:_modelClass];
-    [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelAnyChangeNotification object:FCModel.class];
     [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelAnyChangeNotification object:_modelClass];
 
 #if TARGET_OS_IPHONE
     [NSNotificationCenter.defaultCenter removeObserver:self name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
 #endif
+}
+
+- (void)dataSourceChanged:(NSNotification *)n
+{
+    if (n.object == nil || n.object == self.modelClass) [self flush:n];
 }
 
 - (void)flush:(NSNotification *)n
