@@ -1242,7 +1242,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     dispatch_semaphore_t lock = [self notificationBatchLock];
     dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
     if (g_enqueuedBatchNotifications) {
-        id class = instance.class;
+        id class = (id) self;
         NSMutableDictionary *notificationsForClass = g_enqueuedBatchNotifications[class];
         if (! notificationsForClass) {
             notificationsForClass = [NSMutableDictionary dictionary];
