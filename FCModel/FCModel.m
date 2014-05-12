@@ -948,6 +948,13 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     [self.class postChangeNotification:FCModelAnyChangeNotification changedFields:[NSSet setWithArray:self.class.databaseFieldNames] instance:self];
 
     // Remove instance from unique map
+    [self removeFromCache];
+    
+    return FCModelSaveSucceeded;
+}
+
+- (void)removeFromCache
+{
     id primaryKeyValue = self.primaryKey;
     if (g_instances && primaryKeyValue && primaryKeyValue != NSNull.null) {
         dispatch_semaphore_wait(g_instancesReadLock, DISPATCH_TIME_FOREVER);
@@ -955,8 +962,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         [classCache removeObjectForKey:primaryKeyValue];
         dispatch_semaphore_signal(g_instancesReadLock);
     }
-    
-    return FCModelSaveSucceeded;
 }
 
 + (void)saveAll
