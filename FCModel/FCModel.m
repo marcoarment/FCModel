@@ -255,6 +255,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         } else if (propertyClass == NSArray.class) {
             NSArray *array = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
             return array && [array isKindOfClass:NSArray.class] ? array : @[];
+        } else if (propertyClass == NSDecimalNumber.class) {
+            return [NSDecimalNumber decimalNumberWithDecimal:[databaseValue decimalValue]];
         }
     }
 
