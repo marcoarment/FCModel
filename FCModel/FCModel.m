@@ -1048,7 +1048,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             if (! tableModelClass || ! [tableModelClass isSubclassOfClass:self]) continue;
             
             NSString *primaryKeyName = nil;
-            BOOL isMultiColumnPrimaryKey = NO;
+            int primaryKeyColumnCount = 0;
             NSMutableDictionary *fields = [NSMutableDictionary dictionary];
             FMResultSet *columnsRS = [db executeQuery:[NSString stringWithFormat: @"PRAGMA table_info('%@')", tableName]];
             while ([columnsRS next]) {
@@ -1085,8 +1085,10 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 }
                 
                 int isPK = [columnsRS intForColumnIndex:5];
-                if (isPK == 1) primaryKeyName = fieldName;
-                else if (isPK > 1) isMultiColumnPrimaryKey = YES;
+                if (isPK > primaryKeyColumnCount) {
+                    primaryKeyColumnCount = isPK;
+                    primaryKeyName = fieldName;
+                }
 
                 NSString *fieldType = [columnsRS stringForColumnIndex:2];
                 FCModelFieldInfo *info = [FCModelFieldInfo new];
@@ -1140,9 +1142,13 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 
                 [fields setObject:info forKey:fieldName];
             }
-            
-            if (! primaryKeyName || isMultiColumnPrimaryKey) {
-                [[NSException exceptionWithName:NSInvalidArgumentException reason:[NSString stringWithFormat:@"FCModel tables must have a single-column primary key, not found in %@", tableName] userInfo:nil] raise];
+
+            if (primaryKeyColumnCount != 1 ) {
+                [[NSException
+                    exceptionWithName:NSInternalInconsistencyException
+                    reason:[NSString stringWithFormat:@"FCModel tables must have a single-column primary key, but %@ has %d.", tableName, primaryKeyColumnCount]
+                    userInfo:nil]
+                raise];
             }
             
             id classKey = tableModelClass;
