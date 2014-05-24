@@ -1207,8 +1207,12 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)_beginNotificationBatch
 {
-    if (! NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchNotificationsKey]) { NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchNotificationsKey] = [NSMutableDictionary dictionary]; }
-    if (! NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchChangedFieldsKey]) { NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchChangedFieldsKey] = [NSMutableDictionary dictionary]; }
+    if (NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchNotificationsKey]) {
+        [[NSException exceptionWithName:NSGenericException reason:@"Cannot nest calls to FCModel's performWithBatchedNotifications" userInfo:nil] raise];
+    }
+    
+    NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchNotificationsKey] = [NSMutableDictionary dictionary];
+    NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchChangedFieldsKey] = [NSMutableDictionary dictionary];
 }
 
 + (void)_endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications
