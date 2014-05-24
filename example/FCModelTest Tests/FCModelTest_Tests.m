@@ -75,6 +75,9 @@
         e1ptr = (__bridge void *)(entity1);
         entity1 = nil;
     }
+
+    // the @autoreleasepool does not get cleared immediately
+    [NSThread sleepForTimeInterval:1.0f];
     
     XCTAssertTrue([FCModel closeDatabase]);
     XCTAssertTrue(! [FCModel databaseIsOpen]);
