@@ -13,7 +13,7 @@
 #import "FMDatabase.h"
 #import "FMDatabaseAdditions.h"
 #import <sqlite3.h>
-@import Security;
+#import <Security/Security.h>
 
 NSString * const FCModelInsertNotification = @"FCModelInsertNotification";
 NSString * const FCModelUpdateNotification = @"FCModelUpdateNotification";
