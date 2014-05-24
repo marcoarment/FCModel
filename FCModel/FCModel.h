@@ -6,6 +6,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#include <AvailabilityMacros.h>
 
 #ifdef COCOAPODS
 #import <FMDB/FMDatabase.h>
@@ -224,8 +225,14 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 // Be careful: batch notification order is not preserved, and you may be unexpectedly interacting with deleted instances.
 // Always check the given instances' .existsInDatabase property.
 //
-+ (void)beginNotificationBatch;
-+ (void)endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications;
+// NOTE: Notification batching is thread-local. Operations performed in other threads will still send notifications normally.
+//
++ (void)performWithBatchedNotifications:(void (^)())block deliverOnCompletion:(BOOL)deliverNotifications;
++ (void)performWithBatchedNotifications:(void (^)())block; // equivalent to performWithBatchedNotifications:deliverOnCompletion:YES
+
+// Deprecated original call style. Will be removed imminently:
++ (void)beginNotificationBatch DEPRECATED_ATTRIBUTE;
++ (void)endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications DEPRECATED_ATTRIBUTE;
 
 // Field info: You probably won't need this most of the time, but it's nice to have sometimes. FCModel's generating this privately
 //  anyway, so you might as well have read-only access to it if it can help you avoid some code. (I've already needed it.)

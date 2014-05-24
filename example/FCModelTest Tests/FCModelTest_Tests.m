@@ -317,89 +317,87 @@
         [nc addObserverForName:FCModelAnyChangeNotification object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsClass2++;  }],
     ];
 
-    [FCModel beginNotificationBatch];
+    [FCModel performWithBatchedNotifications:^{
+        SimpleModel *insertModel = [SimpleModel new];
+        insertModel.name = @"insert";
+        [insertModel save];
+        
+        XCTAssert(insertNotificationsNoClass == 0, @"[1] Received %d insert classless notifications",    insertNotificationsNoClass);
+        XCTAssert(insertNotificationsClass1  == 0, @"[1] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
+        XCTAssert(insertNotificationsClass2  == 0, @"[1] Received %d insert SimplerModel notifications", insertNotificationsClass2);
+        XCTAssert(updateNotificationsNoClass == 0, @"[1] Received %d update classless notifications",    updateNotificationsNoClass);
+        XCTAssert(updateNotificationsClass1  == 0, @"[1] Received %d update SimpleModel notifications",  updateNotificationsClass1);
+        XCTAssert(updateNotificationsClass2  == 0, @"[1] Received %d update SimplerModel notifications", updateNotificationsClass2);
+        XCTAssert(deleteNotificationsNoClass == 0, @"[1] Received %d delete classless notifications",    deleteNotificationsNoClass);
+        XCTAssert(deleteNotificationsClass1  == 0, @"[1] Received %d delete SimpleModel notifications",  deleteNotificationsClass1);
+        XCTAssert(deleteNotificationsClass2  == 0, @"[1] Received %d delete SimplerModel notifications", deleteNotificationsClass2);
+        XCTAssert(anyChgNotificationsNoClass == 0, @"[1] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
+        XCTAssert(anyChgNotificationsClass1  == 0, @"[1] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
+        XCTAssert(anyChgNotificationsClass2  == 0, @"[1] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
 
-    SimpleModel *insertModel = [SimpleModel new];
-    insertModel.name = @"insert";
-    [insertModel save];
-    
-    XCTAssert(insertNotificationsNoClass == 0, @"[1] Received %d insert classless notifications",    insertNotificationsNoClass);
-    XCTAssert(insertNotificationsClass1  == 0, @"[1] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
-    XCTAssert(insertNotificationsClass2  == 0, @"[1] Received %d insert SimplerModel notifications", insertNotificationsClass2);
-    XCTAssert(updateNotificationsNoClass == 0, @"[1] Received %d update classless notifications",    updateNotificationsNoClass);
-    XCTAssert(updateNotificationsClass1  == 0, @"[1] Received %d update SimpleModel notifications",  updateNotificationsClass1);
-    XCTAssert(updateNotificationsClass2  == 0, @"[1] Received %d update SimplerModel notifications", updateNotificationsClass2);
-    XCTAssert(deleteNotificationsNoClass == 0, @"[1] Received %d delete classless notifications",    deleteNotificationsNoClass);
-    XCTAssert(deleteNotificationsClass1  == 0, @"[1] Received %d delete SimpleModel notifications",  deleteNotificationsClass1);
-    XCTAssert(deleteNotificationsClass2  == 0, @"[1] Received %d delete SimplerModel notifications", deleteNotificationsClass2);
-    XCTAssert(anyChgNotificationsNoClass == 0, @"[1] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
-    XCTAssert(anyChgNotificationsClass1  == 0, @"[1] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
-    XCTAssert(anyChgNotificationsClass2  == 0, @"[1] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
+        SimplerModel *insertModel2 = [SimplerModel new];
+        insertModel2.title = @"insert2";
+        [insertModel2 save];
 
-    SimplerModel *insertModel2 = [SimplerModel new];
-    insertModel2.title = @"insert2";
-    [insertModel2 save];
+        XCTAssert(insertNotificationsNoClass == 0, @"[2] Received %d insert classless notifications",    insertNotificationsNoClass);
+        XCTAssert(insertNotificationsClass1  == 0, @"[2] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
+        XCTAssert(insertNotificationsClass2  == 0, @"[2] Received %d insert SimplerModel notifications", insertNotificationsClass2);
+        XCTAssert(updateNotificationsNoClass == 0, @"[2] Received %d update classless notifications",    updateNotificationsNoClass);
+        XCTAssert(updateNotificationsClass1  == 0, @"[2] Received %d update SimpleModel notifications",  updateNotificationsClass1);
+        XCTAssert(updateNotificationsClass2  == 0, @"[2] Received %d update SimplerModel notifications", updateNotificationsClass2);
+        XCTAssert(deleteNotificationsNoClass == 0, @"[2] Received %d delete classless notifications",    deleteNotificationsNoClass);
+        XCTAssert(deleteNotificationsClass1  == 0, @"[2] Received %d delete SimpleModel notifications",  deleteNotificationsClass1);
+        XCTAssert(deleteNotificationsClass2  == 0, @"[2] Received %d delete SimplerModel notifications", deleteNotificationsClass2);
+        XCTAssert(anyChgNotificationsNoClass == 0, @"[2] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
+        XCTAssert(anyChgNotificationsClass1  == 0, @"[2] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
+        XCTAssert(anyChgNotificationsClass2  == 0, @"[2] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
 
-    XCTAssert(insertNotificationsNoClass == 0, @"[2] Received %d insert classless notifications",    insertNotificationsNoClass);
-    XCTAssert(insertNotificationsClass1  == 0, @"[2] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
-    XCTAssert(insertNotificationsClass2  == 0, @"[2] Received %d insert SimplerModel notifications", insertNotificationsClass2);
-    XCTAssert(updateNotificationsNoClass == 0, @"[2] Received %d update classless notifications",    updateNotificationsNoClass);
-    XCTAssert(updateNotificationsClass1  == 0, @"[2] Received %d update SimpleModel notifications",  updateNotificationsClass1);
-    XCTAssert(updateNotificationsClass2  == 0, @"[2] Received %d update SimplerModel notifications", updateNotificationsClass2);
-    XCTAssert(deleteNotificationsNoClass == 0, @"[2] Received %d delete classless notifications",    deleteNotificationsNoClass);
-    XCTAssert(deleteNotificationsClass1  == 0, @"[2] Received %d delete SimpleModel notifications",  deleteNotificationsClass1);
-    XCTAssert(deleteNotificationsClass2  == 0, @"[2] Received %d delete SimplerModel notifications", deleteNotificationsClass2);
-    XCTAssert(anyChgNotificationsNoClass == 0, @"[2] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
-    XCTAssert(anyChgNotificationsClass1  == 0, @"[2] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
-    XCTAssert(anyChgNotificationsClass2  == 0, @"[2] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
+        insertModel2.title = @"update2";
+        [insertModel2 save];
 
-    insertModel2.title = @"update2";
-    [insertModel2 save];
+        XCTAssert(insertNotificationsNoClass == 0, @"[3] Received %d insert classless notifications",    insertNotificationsNoClass);
+        XCTAssert(insertNotificationsClass1  == 0, @"[3] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
+        XCTAssert(insertNotificationsClass2  == 0, @"[3] Received %d insert SimplerModel notifications", insertNotificationsClass2);
+        XCTAssert(updateNotificationsNoClass == 0, @"[3] Received %d update classless notifications",    updateNotificationsNoClass);
+        XCTAssert(updateNotificationsClass1  == 0, @"[3] Received %d update SimpleModel notifications",  updateNotificationsClass1);
+        XCTAssert(updateNotificationsClass2  == 0, @"[3] Received %d update SimplerModel notifications", updateNotificationsClass2);
+        XCTAssert(deleteNotificationsNoClass == 0, @"[3] Received %d delete classless notifications",    deleteNotificationsNoClass);
+        XCTAssert(deleteNotificationsClass1  == 0, @"[3] Received %d delete SimpleModel notifications",  deleteNotificationsClass1);
+        XCTAssert(deleteNotificationsClass2  == 0, @"[3] Received %d delete SimplerModel notifications", deleteNotificationsClass2);
+        XCTAssert(anyChgNotificationsNoClass == 0, @"[3] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
+        XCTAssert(anyChgNotificationsClass1  == 0, @"[3] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
+        XCTAssert(anyChgNotificationsClass2  == 0, @"[3] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
 
-    XCTAssert(insertNotificationsNoClass == 0, @"[3] Received %d insert classless notifications",    insertNotificationsNoClass);
-    XCTAssert(insertNotificationsClass1  == 0, @"[3] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
-    XCTAssert(insertNotificationsClass2  == 0, @"[3] Received %d insert SimplerModel notifications", insertNotificationsClass2);
-    XCTAssert(updateNotificationsNoClass == 0, @"[3] Received %d update classless notifications",    updateNotificationsNoClass);
-    XCTAssert(updateNotificationsClass1  == 0, @"[3] Received %d update SimpleModel notifications",  updateNotificationsClass1);
-    XCTAssert(updateNotificationsClass2  == 0, @"[3] Received %d update SimplerModel notifications", updateNotificationsClass2);
-    XCTAssert(deleteNotificationsNoClass == 0, @"[3] Received %d delete classless notifications",    deleteNotificationsNoClass);
-    XCTAssert(deleteNotificationsClass1  == 0, @"[3] Received %d delete SimpleModel notifications",  deleteNotificationsClass1);
-    XCTAssert(deleteNotificationsClass2  == 0, @"[3] Received %d delete SimplerModel notifications", deleteNotificationsClass2);
-    XCTAssert(anyChgNotificationsNoClass == 0, @"[3] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
-    XCTAssert(anyChgNotificationsClass1  == 0, @"[3] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
-    XCTAssert(anyChgNotificationsClass2  == 0, @"[3] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
+        [insertModel delete];
 
-    [insertModel delete];
+        XCTAssert(insertNotificationsNoClass == 0, @"[4] Received %d insert classless notifications",    insertNotificationsNoClass);
+        XCTAssert(insertNotificationsClass1  == 0, @"[4] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
+        XCTAssert(insertNotificationsClass2  == 0, @"[4] Received %d insert SimplerModel notifications", insertNotificationsClass2);
+        XCTAssert(updateNotificationsNoClass == 0, @"[4] Received %d update classless notifications",    updateNotificationsNoClass);
+        XCTAssert(updateNotificationsClass1  == 0, @"[4] Received %d update SimpleModel notifications",  updateNotificationsClass1);
+        XCTAssert(updateNotificationsClass2  == 0, @"[4] Received %d update SimplerModel notifications", updateNotificationsClass2);
+        XCTAssert(deleteNotificationsNoClass == 0, @"[4] Received %d delete classless notifications",    deleteNotificationsNoClass);
+        XCTAssert(deleteNotificationsClass1  == 0, @"[4] Received %d delete SimpleModel notifications",  deleteNotificationsClass1);
+        XCTAssert(deleteNotificationsClass2  == 0, @"[4] Received %d delete SimplerModel notifications", deleteNotificationsClass2);
+        XCTAssert(anyChgNotificationsNoClass == 0, @"[4] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
+        XCTAssert(anyChgNotificationsClass1  == 0, @"[4] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
+        XCTAssert(anyChgNotificationsClass2  == 0, @"[4] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
 
-    XCTAssert(insertNotificationsNoClass == 0, @"[4] Received %d insert classless notifications",    insertNotificationsNoClass);
-    XCTAssert(insertNotificationsClass1  == 0, @"[4] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
-    XCTAssert(insertNotificationsClass2  == 0, @"[4] Received %d insert SimplerModel notifications", insertNotificationsClass2);
-    XCTAssert(updateNotificationsNoClass == 0, @"[4] Received %d update classless notifications",    updateNotificationsNoClass);
-    XCTAssert(updateNotificationsClass1  == 0, @"[4] Received %d update SimpleModel notifications",  updateNotificationsClass1);
-    XCTAssert(updateNotificationsClass2  == 0, @"[4] Received %d update SimplerModel notifications", updateNotificationsClass2);
-    XCTAssert(deleteNotificationsNoClass == 0, @"[4] Received %d delete classless notifications",    deleteNotificationsNoClass);
-    XCTAssert(deleteNotificationsClass1  == 0, @"[4] Received %d delete SimpleModel notifications",  deleteNotificationsClass1);
-    XCTAssert(deleteNotificationsClass2  == 0, @"[4] Received %d delete SimplerModel notifications", deleteNotificationsClass2);
-    XCTAssert(anyChgNotificationsNoClass == 0, @"[4] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
-    XCTAssert(anyChgNotificationsClass1  == 0, @"[4] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
-    XCTAssert(anyChgNotificationsClass2  == 0, @"[4] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
+        [SimplerModel executeUpdateQuery:@"UPDATE $T SET title = 'executeUpdate2'"];
 
-    [SimplerModel executeUpdateQuery:@"UPDATE $T SET title = 'executeUpdate2'"];
-
-    XCTAssert(insertNotificationsNoClass == 0, @"[5] Received %d insert classless notifications",    insertNotificationsNoClass);
-    XCTAssert(insertNotificationsClass1  == 0, @"[5] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
-    XCTAssert(insertNotificationsClass2  == 0, @"[5] Received %d insert SimplerModel notifications", insertNotificationsClass2);
-    XCTAssert(updateNotificationsNoClass == 0, @"[5] Received %d update classless notifications",    updateNotificationsNoClass);
-    XCTAssert(updateNotificationsClass1  == 0, @"[5] Received %d update SimpleModel notifications",  updateNotificationsClass1);
-    XCTAssert(updateNotificationsClass2  == 0, @"[5] Received %d update SimplerModel notifications", updateNotificationsClass2);
-    XCTAssert(deleteNotificationsNoClass == 0, @"[5] Received %d delete classless notifications",    deleteNotificationsNoClass);
-    XCTAssert(deleteNotificationsClass1  == 0, @"[5] Received %d delete SimpleModel notifications",  deleteNotificationsClass1);
-    XCTAssert(deleteNotificationsClass2  == 0, @"[5] Received %d delete SimplerModel notifications", deleteNotificationsClass2);
-    XCTAssert(anyChgNotificationsNoClass == 0, @"[5] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
-    XCTAssert(anyChgNotificationsClass1  == 0, @"[5] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
-    XCTAssert(anyChgNotificationsClass2  == 0, @"[5] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
-
-    [FCModel endNotificationBatchAndNotify:YES];
+        XCTAssert(insertNotificationsNoClass == 0, @"[5] Received %d insert classless notifications",    insertNotificationsNoClass);
+        XCTAssert(insertNotificationsClass1  == 0, @"[5] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
+        XCTAssert(insertNotificationsClass2  == 0, @"[5] Received %d insert SimplerModel notifications", insertNotificationsClass2);
+        XCTAssert(updateNotificationsNoClass == 0, @"[5] Received %d update classless notifications",    updateNotificationsNoClass);
+        XCTAssert(updateNotificationsClass1  == 0, @"[5] Received %d update SimpleModel notifications",  updateNotificationsClass1);
+        XCTAssert(updateNotificationsClass2  == 0, @"[5] Received %d update SimplerModel notifications", updateNotificationsClass2);
+        XCTAssert(deleteNotificationsNoClass == 0, @"[5] Received %d delete classless notifications",    deleteNotificationsNoClass);
+        XCTAssert(deleteNotificationsClass1  == 0, @"[5] Received %d delete SimpleModel notifications",  deleteNotificationsClass1);
+        XCTAssert(deleteNotificationsClass2  == 0, @"[5] Received %d delete SimplerModel notifications", deleteNotificationsClass2);
+        XCTAssert(anyChgNotificationsNoClass == 0, @"[5] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
+        XCTAssert(anyChgNotificationsClass1  == 0, @"[5] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
+        XCTAssert(anyChgNotificationsClass2  == 0, @"[5] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
+    } deliverOnCompletion:YES];
     
     XCTAssert(insertNotificationsNoClass == 2, @"[6] Received %d insert classless notifications",    insertNotificationsNoClass);
     XCTAssert(insertNotificationsClass1  == 1, @"[6] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
@@ -453,18 +451,16 @@
     // Batching
     
     changedFieldsClass1 = nil;
-    [FCModel beginNotificationBatch];
-    
-    insertModel.name = @"batchedUpdate";
-    insertModel.lowercase = @"whatever";
-    [insertModel save];
-    XCTAssert(changedFieldsClass1 == nil, @"Batched update reported wrong field names: %@", changedFieldsClass1);
+    [FCModel performWithBatchedNotifications:^{
+        insertModel.name = @"batchedUpdate";
+        insertModel.lowercase = @"whatever";
+        [insertModel save];
+        XCTAssert(changedFieldsClass1 == nil, @"Batched update reported wrong field names: %@", changedFieldsClass1);
 
-    insertModel.mixedcase = 2;
-    [insertModel save];
-    XCTAssert(changedFieldsClass1 == nil, @"Batched update2 reported wrong field names: %@", changedFieldsClass1);
-    
-    [FCModel endNotificationBatchAndNotify:YES];
+        insertModel.mixedcase = 2;
+        [insertModel save];
+        XCTAssert(changedFieldsClass1 == nil, @"Batched update2 reported wrong field names: %@", changedFieldsClass1);        
+    } deliverOnCompletion:YES];
     
     NSSet *changedFields = [NSSet setWithObjects:@"name", @"lowercase", @"mixedcase", nil];
     XCTAssert([changedFieldsClass1 isEqualToSet:changedFields], @"Batch reported wrong field names: %@", changedFieldsClass1);

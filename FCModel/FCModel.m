@@ -27,14 +27,15 @@ NSString * const FCModelWillReloadNotification = @"FCModelWillReloadNotification
 static NSString * const FCModelReloadNotification = @"FCModelReloadNotification";
 static NSString * const FCModelSaveNotification   = @"FCModelSaveNotification";
 
+static NSString * const FCModelEnqueuedBatchNotificationsKey = @"FCModelEnqueuedBatchNotifications";
+static NSString * const FCModelEnqueuedBatchChangedFieldsKey   = @"FCModelEnqueuedBatchChangedFields";
+
 static FCModelDatabaseQueue *g_databaseQueue = NULL;
 static NSDictionary *g_fieldInfo = NULL;
 static NSDictionary *g_primaryKeyFieldName = NULL;
 static NSSet *g_tablesUsingAutoIncrementEmulation = NULL;
 static NSMutableDictionary *g_instances = NULL;
 static dispatch_semaphore_t g_instancesReadLock;
-static NSMutableDictionary *g_enqueuedBatchNotifications = NULL;
-static NSMutableDictionary *g_enqueuedBatchChangedFields = NULL;
 
 @interface FMDatabase (HackForVAListsSinceThisIsPrivate)
 - (FMResultSet *)executeQuery:(NSString *)sql withArgumentsInArray:(NSArray*)arrayArgs orDictionary:(NSDictionary *)dictionaryArgs orVAList:(va_list)args;
@@ -1185,9 +1186,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     g_primaryKeyFieldName = nil;
     g_fieldInfo = nil;
     g_tablesUsingAutoIncrementEmulation = nil;
-    g_enqueuedBatchNotifications = nil;
-    g_enqueuedBatchChangedFields = nil;
-
+    
+    [NSThread.currentThread.threadDictionary removeObjectsForKeys:@[ FCModelEnqueuedBatchNotificationsKey, FCModelEnqueuedBatchChangedFieldsKey ]];
+    
     return ! modelsAreStillLoaded;
 }
 
@@ -1201,38 +1202,22 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 #pragma mark - Batch notification queuing
 
-+ (dispatch_semaphore_t)notificationBatchLock
++ (void)beginNotificationBatch { [self _beginNotificationBatch]; }
++ (void)endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications { [self _endNotificationBatchAndNotify:sendQueuedNotifications]; }
+
++ (void)_beginNotificationBatch
 {
-    static dispatch_once_t onceToken;
-    static dispatch_semaphore_t lock;
-    dispatch_once(&onceToken, ^{
-        lock = dispatch_semaphore_create(1);
-    });
-    return lock;
+    if (! NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchNotificationsKey]) { NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchNotificationsKey] = [NSMutableDictionary dictionary]; }
+    if (! NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchChangedFieldsKey]) { NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchChangedFieldsKey] = [NSMutableDictionary dictionary]; }
 }
 
-+ (void)beginNotificationBatch
++ (void)_endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications
 {
-    dispatch_semaphore_t lock = [self notificationBatchLock];
-    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
-    if (! g_enqueuedBatchNotifications) {
-        g_enqueuedBatchNotifications = [NSMutableDictionary dictionary];
-        g_enqueuedBatchChangedFields = [NSMutableDictionary dictionary];
-    }
-    dispatch_semaphore_signal(lock);
-}
+    if (! NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchNotificationsKey]) return;
 
-+ (void)endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications
-{
-    if (! g_enqueuedBatchNotifications) return;
-
-    dispatch_semaphore_t lock = [self notificationBatchLock];    
-    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
-    NSDictionary *notificationsToSend = sendQueuedNotifications ? [g_enqueuedBatchNotifications copy] : nil;
-    NSDictionary *changedFields = sendQueuedNotifications ? [g_enqueuedBatchChangedFields copy] : nil;
-    g_enqueuedBatchNotifications = nil;
-    g_enqueuedBatchChangedFields = nil;
-    dispatch_semaphore_signal(lock);
+    NSDictionary *notificationsToSend = sendQueuedNotifications ? [NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchNotificationsKey] copy] : nil;
+    NSDictionary *changedFields = sendQueuedNotifications ? [NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchChangedFieldsKey] copy] : nil;
+    [NSThread.currentThread.threadDictionary removeObjectsForKeys:@[ FCModelEnqueuedBatchNotificationsKey, FCModelEnqueuedBatchChangedFieldsKey ]];
     
     if (sendQueuedNotifications) {
         onMainThreadAsync(^{
@@ -1248,24 +1233,32 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     }
 }
 
++ (void)performWithBatchedNotifications:(void (^)())block { [self performWithBatchedNotifications:block deliverOnCompletion:YES]; }
++ (void)performWithBatchedNotifications:(void (^)())block deliverOnCompletion:(BOOL)deliverNotifications
+{
+    [self _beginNotificationBatch];
+    block();
+    [self _endNotificationBatchAndNotify:deliverNotifications];
+}
+
 + (void)postChangeNotification:(NSString *)name changedFields:(NSSet *)changedFields instance:(FCModel *)instance
 {
     BOOL enqueued = NO;
     
-    dispatch_semaphore_t lock = [self notificationBatchLock];
-    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
-    if (g_enqueuedBatchNotifications) {
+    NSMutableDictionary *enqueuedBatchNotifications = NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchNotificationsKey];
+    if (enqueuedBatchNotifications) {
         id class = (id) self;
-        NSMutableDictionary *notificationsForClass = g_enqueuedBatchNotifications[class];
+        NSMutableDictionary *notificationsForClass = enqueuedBatchNotifications[class];
         if (! notificationsForClass) {
             notificationsForClass = [NSMutableDictionary dictionary];
-            g_enqueuedBatchNotifications[class] = notificationsForClass;
+            enqueuedBatchNotifications[class] = notificationsForClass;
         }
 
-        NSMutableSet *changedFieldsForClass = g_enqueuedBatchChangedFields[class];
+        NSMutableDictionary *enqueuedBatchChangedFields = NSThread.currentThread.threadDictionary[FCModelEnqueuedBatchChangedFieldsKey];
+        NSMutableSet *changedFieldsForClass = enqueuedBatchChangedFields[class];
         if (! changedFieldsForClass) {
             changedFieldsForClass = [NSMutableSet set];
-            g_enqueuedBatchChangedFields[class] = changedFieldsForClass;
+            enqueuedBatchChangedFields[class] = changedFieldsForClass;
         }
         [changedFieldsForClass unionSet:changedFields];
         
@@ -1279,7 +1272,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
         enqueued = YES;
     }
-    dispatch_semaphore_signal(lock);
     
     if (! enqueued) {
         onMainThreadAsync(^{
