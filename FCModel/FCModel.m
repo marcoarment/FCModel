@@ -1069,7 +1069,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 }
                 
                 Class propertyClass;
-                NSString *propertyClassName, *typeString = [propertyAttributes objectAtIndex:0];
+                NSString *propertyClassName, *typeString = propertyAttributes.count ? propertyAttributes[0] : nil;
                 if (typeString) {
                     if (
                         [typeString hasPrefix:@"T@\""] && [typeString hasSuffix:@"\""] && typeString.length > 4 &&
