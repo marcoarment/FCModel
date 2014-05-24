@@ -61,7 +61,7 @@
     NSArray *array = [SimpleModel instancesWhere:@"name == ?", @"123"];
     XCTAssertTrue(array.count == 1, @"More than 1 element");
 
-    SimpleModel *first = [array firstObject];
+    SimpleModel *first = [array objectAtIndex:0];
     XCTAssertTrue(newlyCreated == first, @"%@ and %@ are different objects!", newlyCreated, first);
 }
 
