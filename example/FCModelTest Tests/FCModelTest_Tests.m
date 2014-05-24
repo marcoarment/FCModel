@@ -61,7 +61,7 @@
     NSArray *array = [SimpleModel instancesWhere:@"name == ?", @"123"];
     XCTAssertTrue(array.count == 1, @"More than 1 element");
 
-    SimpleModel *first = [array firstObject];
+    SimpleModel *first = [array objectAtIndex:0];
     XCTAssertTrue(newlyCreated == first, @"%@ and %@ are different objects!", newlyCreated, first);
 }
 
@@ -75,6 +75,9 @@
         e1ptr = (__bridge void *)(entity1);
         entity1 = nil;
     }
+
+    // the @autoreleasepool does not get cleared immediately
+    [NSThread sleepForTimeInterval:1.0f];
     
     XCTAssertTrue([FCModel closeDatabase]);
     XCTAssertTrue(! [FCModel databaseIsOpen]);

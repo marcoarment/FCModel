@@ -13,7 +13,7 @@
 #import "FMDatabase.h"
 #import "FMDatabaseAdditions.h"
 #import <sqlite3.h>
-@import Security;
+#import <Security/Security.h>
 
 NSString * const FCModelInsertNotification = @"FCModelInsertNotification";
 NSString * const FCModelUpdateNotification = @"FCModelUpdateNotification";
@@ -1069,7 +1069,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 }
                 
                 Class propertyClass;
-                NSString *propertyClassName, *typeString = propertyAttributes.firstObject;
+                NSString *propertyClassName, *typeString = [propertyAttributes objectAtIndex:0];
                 if (typeString) {
                     if (
                         [typeString hasPrefix:@"T@\""] && [typeString hasSuffix:@"\""] && typeString.length > 4 &&
