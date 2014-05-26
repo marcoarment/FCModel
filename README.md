@@ -157,6 +157,8 @@ bob.createdTime = [NSDate date];
 
 SELECT and UPDATE queries should look familiar to FMDB fans: everything's parameterized with `?` placeholders and varargs query functions, and it's passed right through to FMDB. Just as with FMDB, you need to box primitives when passing them as query params, e.g. `@(1)` instead of `1`.
 
+Note that `+instanceWithPrimaryKey:` will create a new instance, if none is found for the supplied primary key.  To change this behavior, use `+instanceWithPrimaryKey:createIfNonexistent:` or `+instanceWithPrimaryKey:databaseRowValues:createIfNonexsistent:`.
+
 ```obj-c
 // Find that specific Bob by ID
 Person *bob = [Person instanceWithPrimaryKey:@(123)];
