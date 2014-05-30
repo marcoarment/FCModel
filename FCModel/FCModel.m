@@ -91,6 +91,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 - (NSError *)lastSQLiteError { return self._lastSQLiteError; }
 
+- (BOOL)isDeleted { return deleted; }
+
 #pragma mark - For subclasses to override
 
 - (void)didInit { }

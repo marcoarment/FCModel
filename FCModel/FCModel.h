@@ -63,7 +63,8 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 @property (readonly) id primaryKey;
 @property (readonly) NSDictionary *allFields;
 @property (readonly) BOOL hasUnsavedChanges;
-@property (readonly) BOOL existsInDatabase;
+@property (readonly) BOOL existsInDatabase; // either deleted or never saved
+@property (readonly) BOOL isDeleted;
 @property (readonly) NSError *lastSQLiteError;
 
 + (void)openDatabaseAtPath:(NSString *)path withSchemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
