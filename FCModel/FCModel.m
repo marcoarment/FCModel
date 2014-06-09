@@ -95,6 +95,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 #pragma mark - For subclasses to override
 
++ (NSString *)tableName { return NSStringFromClass(self); }
+
 - (void)didInit { }
 - (BOOL)shouldInsert { return YES; }
 - (BOOL)shouldUpdate { return YES; }
@@ -224,7 +226,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         NSData *bplist = [NSPropertyListSerialization dataWithPropertyList:instanceValue format:NSPropertyListBinaryFormat_v1_0 options:NSPropertyListImmutable error:&error];
         if (error) {
             [[NSException exceptionWithName:NSInvalidArgumentException reason:[NSString stringWithFormat:
-                @"Cannot serialize %@ to plist for %@.%@: %@", NSStringFromClass(((NSObject *)instanceValue).class), NSStringFromClass(self.class), propertyName, error.localizedDescription
+                @"Cannot serialize %@ to plist for %@.%@: %@", NSStringFromClass(((NSObject *)instanceValue).class), [self tableName], propertyName, error.localizedDescription
             ] userInfo:nil] raise];
         }
         return bplist;
@@ -586,7 +588,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     BOOL databaseIsOpen = checkForOpenDatabaseFatal(NO);
     
     // Emulation for old AUTOINCREMENT tables
-    if (databaseIsOpen && g_tablesUsingAutoIncrementEmulation && [g_tablesUsingAutoIncrementEmulation containsObject:NSStringFromClass(self)]) {
+    if (databaseIsOpen && g_tablesUsingAutoIncrementEmulation && [g_tablesUsingAutoIncrementEmulation containsObject:[self tableName]]) {
         id largestNumber = [self firstValueFromQuery:@"SELECT MAX($PK) FROM $T"];
         int64_t largestExistingValue = largestNumber && largestNumber != NSNull.null ? ((NSNumber *) largestNumber).longLongValue : 0;
 
@@ -642,7 +644,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                     int attempts = 0;
                     do {
                         attempts++;
-                        NSAssert1(attempts < 100, @"FCModel subclass %@ is not returning usable, unique values from primaryKeyValueForNewInstance", NSStringFromClass(self.class));
+                        NSAssert1(attempts < 100, @"FCModel subclass %@ is not returning usable, unique values from primaryKeyValueForNewInstance", [self tableName]);
                         
                         id newKeyValue = [self.class normalizedPrimaryKeyValue:[self.class primaryKeyValueForNewInstance]];
                         if ([self.class instanceFromDatabaseWithPrimaryKey:newKeyValue]) continue; // already exists in database
@@ -750,7 +752,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     // But this is a decision that you should really make knowingly and deliberately in each case.
 
     [[NSException exceptionWithName:@"FCReloadConflict" reason:
-        [NSString stringWithFormat:@"%@ ID %@ cannot resolve reload conflict for \"%@\"", NSStringFromClass(self.class), self.primaryKey, fieldName]
+        [NSString stringWithFormat:@"%@ ID %@ cannot resolve reload conflict for \"%@\"", [self tableName], self.primaryKey, fieldName]
     userInfo:nil] raise];
     return nil;
 }
@@ -822,10 +824,10 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSSet *changedFields;
     NSMutableArray *values;
     
-    NSString *tableName = NSStringFromClass(self.class);
+    NSString *tableName = [self tableName];
     NSString *pkName = g_primaryKeyFieldName[self.class];
     id primaryKey = [self encodedValueForFieldName:pkName];
-    NSAssert1(primaryKey, @"Cannot update %@ without primary key value", NSStringFromClass(self.class));
+    NSAssert1(primaryKey, @"Cannot update %@ without primary key value", [self tableName]);
    
     if (update) {
         if (! [self shouldUpdate]) {
@@ -986,12 +988,12 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 {
     if (self == FCModel.class) return query;
     query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
-    return [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
+    return [query stringByReplacingOccurrencesOfString:@"$T" withString:[self tableName]];
 }
 
 - (NSString *)description
 {
-    return [NSString stringWithFormat:@"<%@#%@: 0x%p>", NSStringFromClass(self.class), self.primaryKey, self];
+    return [NSString stringWithFormat:@"<%@#%@: 0x%p>", [self tableName], self.primaryKey, self];
 }
 
 - (NSDictionary *)allFields
@@ -1007,6 +1009,12 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 - (NSUInteger)hash
 {
     return ((NSObject *)self.primaryKey).hash;
+}
+
+// Utility to prevent having to make self.class the receiver of the tableName method in every case it had to be used in the scope of an instance method
+- (NSString *)tableName
+{
+    return [self.class tableName];
 }
 
 #pragma mark - Database management
@@ -1177,7 +1185,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     [g_instances enumerateKeysAndObjectsUsingBlock:^(Class class, NSMapTable *classInstances, BOOL *stop) {
         for (id primaryKeyValue in classInstances.keyEnumerator.allObjects) {
             modelsAreStillLoaded = YES;
-            NSLog(@"[FCModel] closeDatabase: %@ ID %@ is still retained by something and is being abandoned by FCModel. This can cause weird bugs. Don't let this happen.", NSStringFromClass(class), primaryKeyValue);
+            NSLog(@"[FCModel] closeDatabase: %@ ID %@ is still retained by something and is being abandoned by FCModel. This can cause weird bugs. Don't let this happen.", [self tableName], primaryKeyValue);
         }
     }];
     [g_instances removeAllObjects];

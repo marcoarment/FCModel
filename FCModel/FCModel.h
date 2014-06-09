@@ -154,6 +154,9 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 
 // For subclasses to override, all optional:
 
+// For instances where the class's name doesn't linearly line up with the destination table name.
++ (NSString *)tableName;
+
 - (void)didInit;
 - (BOOL)shouldInsert;
 - (BOOL)shouldUpdate;
