@@ -1,6 +1,5 @@
 language: objective-c
 env:
-  - XCODE_SDK=iphonesimulator6.1
   - XCODE_SDK=iphonesimulator7.0
   - XCODE_SDK=iphonesimulator7.1
 before_script:
