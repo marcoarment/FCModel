@@ -249,17 +249,19 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     
     if (propertyClass && databaseValue) {
         if (propertyClass == NSURL.class) {
-            return [NSURL URLWithString:databaseValue];
+            return [databaseValue isKindOfClass:NSURL.class] ? databaseValue : [NSURL URLWithString:databaseValue];
         } else if (propertyClass == NSDate.class) {
-            return [NSDate dateWithTimeIntervalSince1970:[databaseValue doubleValue]];
+            return [databaseValue isKindOfClass:NSDate.class] ? databaseValue : [NSDate dateWithTimeIntervalSince1970:[databaseValue doubleValue]];
         } else if (propertyClass == NSDictionary.class) {
+            if ([databaseValue isKindOfClass:NSDictionary.class]) return databaseValue;
             NSDictionary *dict = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
             return dict && [dict isKindOfClass:NSDictionary.class] ? dict : @{};
         } else if (propertyClass == NSArray.class) {
+            if ([databaseValue isKindOfClass:NSArray.class]) return databaseValue;
             NSArray *array = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
             return array && [array isKindOfClass:NSArray.class] ? array : @[];
         } else if (propertyClass == NSDecimalNumber.class) {
-            return [NSDecimalNumber decimalNumberWithDecimal:[databaseValue decimalValue]];
+            return [databaseValue isKindOfClass:NSDecimalNumber.class] ? databaseValue : [NSDecimalNumber decimalNumberWithDecimal:[databaseValue decimalValue]];
         }
     }
 
