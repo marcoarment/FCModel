@@ -1172,6 +1172,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (BOOL)closeDatabase
 {
+    if (! g_databaseQueue) return YES;
+    
     [FCModelCachedObject clearCache];
 
     __block BOOL modelsAreStillLoaded = NO;
