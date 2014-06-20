@@ -111,7 +111,7 @@ NSString *dbPath = [documentsPath stringByAppendingPathComponent:@"testDB.sqlite
             @"CREATE TABLE Person ("
             @"    id           INTEGER PRIMARY KEY,"
             @"    name         TEXT NOT NULL DEFAULT '',"
-            @"    createdTime  INTEGER NOT NULL"
+            @"    createdTime  REAL NOT NULL"
             @");"
         ]) failedAt(1);
 
