@@ -1,8 +1,6 @@
 FCModel
 =======
 
-[![Build Status](https://travis-ci.org/marcoarment/FCModel.svg?branch=master)](https://travis-ci.org/marcoarment/FCModel)
-
 An alternative to Core Data for people who like having direct SQL access.
 
 By [Marco Arment](http://www.marco.org/). See the LICENSE file for license info (it's the MIT license).

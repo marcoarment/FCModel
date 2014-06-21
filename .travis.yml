@@ -1,9 +1,0 @@
-language: objective-c
-env:
-  - XCODE_SDK=iphonesimulator7.0
-  - XCODE_SDK=iphonesimulator7.1
-before_script:
-  - brew update
-  - brew upgrade xctool
-script:
-  - xctool test -project example/FCModelTest.xcodeproj -scheme FCModelTest -sdk ${XCODE_SDK} ARCHS=i386 ONLY_ACTIVE_ARCH=NO
