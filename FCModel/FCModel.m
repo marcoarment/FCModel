@@ -1092,8 +1092,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 }
                 
                 int isPK = [columnsRS intForColumnIndex:5];
-                if (isPK > primaryKeyColumnCount) {
-                    primaryKeyColumnCount = isPK;
+                if (isPK) {
+                    primaryKeyColumnCount++;
                     primaryKeyName = fieldName;
                 }
 
