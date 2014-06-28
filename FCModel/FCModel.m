@@ -502,10 +502,10 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return value ? value.unsignedIntegerValue : 0;
 }
 
-+ (NSUInteger)_numberOfInstancesWhere:(NSString *)query withArgumentsInArray:(NSArray *)array orVAList:(va_list)args {
++ (NSUInteger)_numberOfInstancesWhere:(NSString *)queryAfterWHERE withArgumentsInArray:(NSArray *)array orVAList:(va_list)args {
     __block NSUInteger count = 0;
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:query]] withArgumentsInArray:array orDictionary:nil orVAList:args];
+        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:array orDictionary:nil orVAList:args];
         if (! s) [self queryFailedInDatabase:db];
         if ([s next]) {
             NSNumber *value = [s objectForColumnIndex:0];
@@ -525,9 +525,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return count;
 }
 
-+ (NSUInteger)numberOfInstancesWhere:(NSString *)query arguments:(NSArray *)array
++ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)array
 {
-    return [self _numberOfInstancesWhere:query withArgumentsInArray:array orVAList:NULL];
+    return [self _numberOfInstancesWhere:queryAfterWHERE withArgumentsInArray:array orVAList:NULL];
 }
 
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...
