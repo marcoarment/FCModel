@@ -147,17 +147,17 @@ Creating new instances (INSERTs):
 // If you want a random 64-bit signed integer primary key value for .id:
 Person *bob = [Person new];
 // If you want to specify your own .id value:
-Person *bob = [Person instanceWithPrimaryKey:@(123)];
+Person *bob = [Person instanceWithPrimaryKey:@123];
 bob.name = @"Bob";
 bob.createdTime = [NSDate date];
 [bob save];
 ```
 
-SELECT and UPDATE queries should look familiar to FMDB fans: everything's parameterized with `?` placeholders and varargs query functions, and it's passed right through to FMDB. Just as with FMDB, you need to box primitives when passing them as query params, e.g. `@(1)` instead of `1`.
+SELECT and UPDATE queries should look familiar to FMDB fans: everything's parameterized with `?` placeholders and varargs query functions, and it's passed right through to FMDB. Just as with FMDB, you need to box primitives when passing them as query params, e.g. `@1` instead of `1`.
 
 ```obj-c
 // Find that specific Bob by ID
-Person *bob = [Person instanceWithPrimaryKey:@(123)];
+Person *bob = [Person instanceWithPrimaryKey:@123];
 bob.name = @"Robert";
 [bob save];
 
@@ -177,7 +177,7 @@ Now here's where it gets crazy. Suppose you wanted to rename all Bobs to Robert,
 
 ```obj-c
 // Suppose these are hanging out here, being retained somewhere (in the UI, maybe)
-Person *bob = [Person instanceWithPrimaryKey:@(123)];
+Person *bob = [Person instanceWithPrimaryKey:@123];
 Person *sue = [Person firstInstanceWhere:@"name = 'Sue'"]; // you don't HAVE to parameterize everything
 // ...
 
@@ -212,7 +212,7 @@ FCModels are inherently cached by primary key:
 NSArray *allBobs = [Person instancesWhere:@"name = ?", @"Bob"];
 // executes query: SELECT * FROM Person WHERE name = 'Bob'
 
-Person *bob = [Person instanceWithPrimaryKey:@(123)];
+Person *bob = [Person instanceWithPrimaryKey:@123];
 // cache hit, no query executed
 ```
 

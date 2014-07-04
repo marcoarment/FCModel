@@ -282,7 +282,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 // For unique-instance consistency:
 // Resolve discrepancies between supplied primary-key value type and the column type that comes out of the database.
-// Without this, it's possible to e.g. pull objects with key @(1) and key @"1" as two different instances of the same record.
+// Without this, it's possible to e.g. pull objects with key @1 and key @"1" as two different instances of the same record.
 + (id)normalizedPrimaryKeyValue:(id)value
 {
     static NSNumberFormatter *numberFormatter;
