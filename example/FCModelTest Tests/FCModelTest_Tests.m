@@ -155,12 +155,12 @@
 
     XCTAssertTrue(infoDefaultUnspecified.defaultValue == nil);
     XCTAssertTrue(infoDefaultNull.defaultValue == nil);
-    XCTAssertTrue([infoDefault1.defaultValue isEqual:@(1)]);
+    XCTAssertTrue([infoDefault1.defaultValue isEqual:@1]);
     
     SimpleModel *entity = [SimpleModel new];
     XCTAssertTrue(entity.nullableNumberDefaultUnspecified == nil);
     XCTAssertTrue(entity.nullableNumberDefaultNull == nil);
-    XCTAssertTrue([entity.nullableNumberDefault1 isEqual:@(1)]);
+    XCTAssertTrue([entity.nullableNumberDefault1 isEqual:@1]);
 }
 
 - (void)testKeyedInstancesType
