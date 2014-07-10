@@ -7,17 +7,6 @@
 
 #import "FCModelDatabaseQueue.h"
 
-// this NSOperation only exists, rather than using addOperationWithBlock:, so we can use addOperations:waitUntilFinished:
-//  rather than having to wait for ALL operations to finish in execOnSelfSync:
-//
-@interface FCModelDatabaseQueueOperation : NSOperation
-@property (nonatomic, copy) void (^block)();
-@end
-@implementation FCModelDatabaseQueueOperation
-- (void)main { self.block(); }
-@end
-
-
 @interface FCModelDatabaseQueue ()
 @property (nonatomic) FMDatabase *openDatabase;
 @property (nonatomic) NSString *path;
@@ -51,8 +40,7 @@
     if (NSOperationQueue.currentQueue == self) {
         block();
     } else {
-        FCModelDatabaseQueueOperation *operation = [[FCModelDatabaseQueueOperation alloc] init];
-        operation.block = block;
+        NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:block];
         [self addOperations:@[ operation ] waitUntilFinished:YES];
     }
 }
