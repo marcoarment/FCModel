@@ -23,6 +23,7 @@
 
 - (instancetype)initWithDatabasePath:(NSString *)filename;
 - (void)inDatabase:(void (^)(FMDatabase *db))block;
+- (void)inDatabaseAsync:(void (^)(FMDatabase *db))block;
 - (void)close;
 
 @property (nonatomic, readonly) FMDatabase *database;

@@ -7,17 +7,6 @@
 
 #import "FCModelDatabaseQueue.h"
 
-// this NSOperation only exists, rather than using addOperationWithBlock:, so we can use addOperations:waitUntilFinished:
-//  rather than having to wait for ALL operations to finish in execOnSelfSync:
-//
-@interface FCModelDatabaseQueueOperation : NSOperation
-@property (nonatomic, copy) void (^block)();
-@end
-@implementation FCModelDatabaseQueueOperation
-- (void)main { self.block(); }
-@end
-
-
 @interface FCModelDatabaseQueue ()
 @property (nonatomic) FMDatabase *openDatabase;
 @property (nonatomic) NSString *path;
@@ -51,8 +40,7 @@
     if (NSOperationQueue.currentQueue == self) {
         block();
     } else {
-        FCModelDatabaseQueueOperation *operation = [[FCModelDatabaseQueueOperation alloc] init];
-        operation.block = block;
+        NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:block];
         [self addOperations:@[ operation ] waitUntilFinished:YES];
     }
 }
@@ -71,14 +59,22 @@
     self.openDatabase = nil;
 }
 
+- (void (^)())databaseBlockWithBlock:(void (^)(FMDatabase *db))block {
+    FMDatabase *db = self.database;
+    return ^{
+        BOOL hadOpenResultSetsBefore = db.hasOpenResultSets;
+        block(db);
+        if (db.hasOpenResultSets != hadOpenResultSetsBefore) [[NSException exceptionWithName:NSGenericException reason:@"FCModelDatabaseQueue has an open FMResultSet after inDatabase:" userInfo:nil] raise];
+    };
+}
+
 - (void)inDatabase:(void (^)(FMDatabase *db))block
 {
-    [self execOnSelfSync:^{
-        FMDatabase *db = self.database;
-        BOOL hadOpenResultSetsBefore = db.hasOpenResultSets;
-        block(self.database);
-        if (db.hasOpenResultSets != hadOpenResultSetsBefore) [[NSException exceptionWithName:NSGenericException reason:@"FCModelDatabaseQueue has an open FMResultSet after inDatabase:" userInfo:nil] raise];
-    }];
+    [self execOnSelfSync:[self databaseBlockWithBlock:block]];
+}
+
+- (void)inDatabaseAsync:(void (^)(FMDatabase *db))block {
+    [self addOperation:[NSBlockOperation blockOperationWithBlock:[self databaseBlockWithBlock:block]]];
 }
 
 @end
