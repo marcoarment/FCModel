@@ -59,14 +59,22 @@
     self.openDatabase = nil;
 }
 
+- (void (^)())databaseBlockWithBlock:(void (^)(FMDatabase *db))block {
+    FMDatabase *db = self.database;
+    return ^{
+        BOOL hadOpenResultSetsBefore = db.hasOpenResultSets;
+        block(db);
+        if (db.hasOpenResultSets != hadOpenResultSetsBefore) [[NSException exceptionWithName:NSGenericException reason:@"FCModelDatabaseQueue has an open FMResultSet after inDatabase:" userInfo:nil] raise];
+    };
+}
+
 - (void)inDatabase:(void (^)(FMDatabase *db))block
 {
-    [self execOnSelfSync:^{
-        FMDatabase *db = self.database;
-        BOOL hadOpenResultSetsBefore = db.hasOpenResultSets;
-        block(self.database);
-        if (db.hasOpenResultSets != hadOpenResultSetsBefore) [[NSException exceptionWithName:NSGenericException reason:@"FCModelDatabaseQueue has an open FMResultSet after inDatabase:" userInfo:nil] raise];
-    }];
+    [self execOnSelfSync:[self databaseBlockWithBlock:block]];
+}
+
+- (void)inDatabaseAsync:(void (^)(FMDatabase *db))block {
+    [self addOperation:[NSBlockOperation blockOperationWithBlock:[self databaseBlockWithBlock:block]]];
 }
 
 @end
