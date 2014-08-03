@@ -23,6 +23,7 @@ NSString * const FCModelInstanceSetKey = @"FCModelInstanceSetKey";
 NSString * const FCModelChangedFieldsKey = @"FCModelChangedFieldsKey";
 
 NSString * const FCModelWillReloadNotification = @"FCModelWillReloadNotification";
+NSString * const FCModelWillSendAnyChangeNotification = @"FCModelWillSendAnyChangeNotification"; // for FCModelCachedObject
 
 static NSString * const FCModelReloadNotification = @"FCModelReloadNotification";
 static NSString * const FCModelSaveNotification   = @"FCModelSaveNotification";
@@ -206,9 +207,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             NSArray *loadedInstances = class.allLoadedInstances;
             if (loadedInstances.count) {
                 for (FCModel *instance in loadedInstances) {
+                    [class postChangeNotification:FCModelWillSendAnyChangeNotification changedFields:changedFields instance:instance];
                     [class postChangeNotification:FCModelAnyChangeNotification changedFields:changedFields instance:instance];
                 }
             } else {
+                [class postChangeNotification:FCModelWillSendAnyChangeNotification changedFields:changedFields instance:nil];
                 [class postChangeNotification:FCModelAnyChangeNotification changedFields:changedFields instance:nil];
             }
         }
@@ -915,10 +918,12 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     
     if (update) {
         [self didUpdate];
+        [self.class postChangeNotification:FCModelWillSendAnyChangeNotification changedFields:changedFields instance:self];
         [self.class postChangeNotification:FCModelUpdateNotification changedFields:changedFields instance:self];
         [self.class postChangeNotification:FCModelAnyChangeNotification changedFields:changedFields instance:self];
     } else {
         [self didInsert];
+        [self.class postChangeNotification:FCModelWillSendAnyChangeNotification changedFields:changedFields instance:self];
         [self.class postChangeNotification:FCModelInsertNotification changedFields:changedFields instance:self];
         [self.class postChangeNotification:FCModelAnyChangeNotification changedFields:changedFields instance:self];
     }
@@ -951,7 +956,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     deleted = YES;
     existsInDatabase = NO;
     [self didDelete];
-    [self.class postChangeNotification:FCModelDeleteNotification changedFields:[NSSet setWithArray:self.class.databaseFieldNames] instance:self];
+    NSSet *changedFields = [NSSet setWithArray:self.class.databaseFieldNames];
+    [self.class postChangeNotification:FCModelWillSendAnyChangeNotification changedFields:changedFields instance:self];
+    [self.class postChangeNotification:FCModelDeleteNotification changedFields:changedFields instance:self];
     [self.class postChangeNotification:FCModelAnyChangeNotification changedFields:[NSSet setWithArray:self.class.databaseFieldNames] instance:self];
 
     // Remove instance from unique map
