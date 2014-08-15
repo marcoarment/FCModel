@@ -1206,7 +1206,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return ! modelsAreStillLoaded;
 }
 
-+ (BOOL)databaseIsOpen { return (BOOL) g_databaseQueue; }
++ (BOOL)databaseIsOpen { return !!g_databaseQueue; }
 
 + (void)inDatabaseSync:(void (^)(FMDatabase *db))block
 {
