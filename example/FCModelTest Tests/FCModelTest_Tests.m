@@ -188,6 +188,20 @@
     XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
 }
 
+- (void)testVariableLimit {
+    __block int maxParameterCount = 0;
+    [FCModel inDatabaseSync:^(FMDatabase *db) {
+        maxParameterCount = sqlite3_limit(db.sqliteHandle, SQLITE_LIMIT_VARIABLE_NUMBER, -1);
+    }];
+    
+    NSMutableArray *values = [NSMutableArray arrayWithCapacity:maxParameterCount+1];
+    for (int i = 0; i <= maxParameterCount; i++) {
+        [values addObject:@(i)];
+    }
+    XCTAssertNoThrow([SimpleModel instancesWithPrimaryKeyValues:values]);
+    
+}
+
 - (void)testNotifications
 {
     __block int insertNotificationsClass1 = 0, insertNotificationsClass2 = 0, insertNotificationsNoClass = 0,

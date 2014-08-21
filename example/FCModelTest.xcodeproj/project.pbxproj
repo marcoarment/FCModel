@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		49B84BD219A5D8850070B159 /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFB1A17E4D2830066C5EA /* libsqlite3.dylib */; };
 		9230D6FB17F32EF1000C9C87 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9230D6FA17F32EF1000C9C87 /* XCTest.framework */; };
 		9230D6FC17F32EF1000C9C87 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC217E4C8EE0066C5EA /* Foundation.framework */; };
 		9230D6FD17F32EF1000C9C87 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC617E4C8EE0066C5EA /* UIKit.framework */; };
@@ -109,6 +110,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				49B84BD219A5D8850070B159 /* libsqlite3.dylib in Frameworks */,
 				9230D6FB17F32EF1000C9C87 /* XCTest.framework in Frameworks */,
 				9230D6FD17F32EF1000C9C87 /* UIKit.framework in Frameworks */,
 				9230D6FC17F32EF1000C9C87 /* Foundation.framework in Frameworks */,
