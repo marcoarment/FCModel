@@ -467,6 +467,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block NSArray *allFoundInstances = nil;
     NSMutableArray *valuesArray = [NSMutableArray arrayWithCapacity:MIN(primaryKeyValues.count, maxParameterCount)];
     NSMutableString *whereClause = [NSMutableString stringWithFormat:@"%@ IN (", g_primaryKeyFieldName[self]];
+    NSUInteger whereClauseLength = whereClause.length;
     
     void (^fetchChunk)() = ^{
         if (valuesArray.count == 0) return;
@@ -475,7 +476,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         allFoundInstances = allFoundInstances ? [allFoundInstances arrayByAddingObjectsFromArray:newInstancesThisChunk] : newInstancesThisChunk;
         
         // reset state for next chunk
-        [whereClause deleteCharactersInRange:NSMakeRange(7, whereClause.length - 7)];
+        [whereClause deleteCharactersInRange:NSMakeRange(whereClauseLength, whereClause.length - whereClauseLength)];
         [valuesArray removeAllObjects];
     };
     
