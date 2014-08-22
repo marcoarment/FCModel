@@ -788,7 +788,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         if ([fieldName isEqualToString:g_primaryKeyFieldName[self.class]]) return;
 
         NSDictionary *rowValuesInDatabase = self._rowValuesInDatabase;
-        id oldValue = rowValuesInDatabase ? rowValuesInDatabase[fieldName] : nil;
+        id oldValue = rowValuesInDatabase && [rowValuesInDatabase isKindOfClass:NSDictionary.class] ? rowValuesInDatabase[fieldName] : nil;
         if (oldValue) oldValue = [self unserializedRepresentationOfDatabaseValue:(oldValue == NSNull.null ? nil : oldValue) forPropertyNamed:fieldName];
         
         id newValue = [self valueForKey:fieldName];
