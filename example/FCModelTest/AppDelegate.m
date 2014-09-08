@@ -25,7 +25,7 @@
     // New DB on every launch for testing (comment out for persistence testing)
     [NSFileManager.defaultManager removeItemAtPath:dbPath error:NULL];
     
-    [FCModel openDatabaseAtPath:dbPath withSchemaBuilder:^(FMDatabase *db, int *schemaVersion) {
+    [FCModel openDatabaseAtPath:dbPath withDatabaseInitializer:NULL schemaBuilder:^(FMDatabase *db, int *schemaVersion) {
         [db setCrashOnErrors:YES];
         db.traceExecution = YES; // Log every query (useful to learn what FCModel is doing or analyze performance)
         [db beginTransaction];
@@ -40,7 +40,7 @@
         if (*schemaVersion < 1) {
             if (! [db executeUpdate:
                 @"CREATE TABLE Person ("
-                @"    id           INTEGER PRIMARY KEY AUTOINCREMENT," // Autoincrement is optional. Just demonstrating that it works.
+                @"    id           INTEGER PRIMARY KEY,"
                 @"    name         TEXT NOT NULL DEFAULT '',"
                 @"    colorName    TEXT NOT NULL,"
                 @"    taps         INTEGER NOT NULL DEFAULT 0,"
@@ -104,8 +104,8 @@
     NSArray *allColors = [Color allInstances];
     Color *testUniqueRed2 = [Color instanceWithPrimaryKey:@"red"];
     
-    NSAssert(testUniqueRed0 == testUniqueRed1, @"Instance-uniqueness check 1 failed");
-    NSAssert(testUniqueRed1 == testUniqueRed2, @"Instance-uniqueness check 2 failed");
+    NSAssert(testUniqueRed0 != testUniqueRed1, @"Instance-non-uniqueness check 1 failed");
+    NSAssert(testUniqueRed1 != testUniqueRed2, @"Instance-non-uniqueness check 2 failed");
 
 
     // Comment/uncomment this to see caching/retention behavior.
@@ -119,7 +119,10 @@
     int numPeople = [[Person firstValueFromQuery:@"SELECT COUNT(*) FROM $T"] intValue];
     while (numPeople < 26) {
         Person *p = [Person new];
-        p.name = [RandomThings randomName];
+        do {
+            p.name = [RandomThings randomName];
+        } while ([Person firstInstanceWhere:@"name = ?", p.name]);
+        
         
         if (colorsUsedAlready.count >= allColors.count) [colorsUsedAlready removeAllObjects];
         

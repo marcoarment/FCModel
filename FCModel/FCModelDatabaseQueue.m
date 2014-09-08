@@ -10,6 +10,7 @@
 @interface FCModelDatabaseQueue ()
 @property (nonatomic) FMDatabase *openDatabase;
 @property (nonatomic) NSString *path;
+@property (nonatomic) NSMutableDictionary *enqueuedChangedFieldsByClass;
 @end
 
 @implementation FCModelDatabaseQueue
@@ -20,6 +21,7 @@
         self.name = NSStringFromClass(self.class);
         self.maxConcurrentOperationCount = 1;
         self.path = path;
+        self.enqueuedChangedFieldsByClass = [NSMutableDictionary dictionary];
     }
     return self;
 }

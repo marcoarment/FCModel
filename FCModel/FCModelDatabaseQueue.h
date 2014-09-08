@@ -27,5 +27,7 @@
 - (void)close;
 
 @property (nonatomic, readonly) FMDatabase *database;
+@property (nonatomic, readonly) NSMutableDictionary *enqueuedChangedFieldsByClass;
+@property (nonatomic) BOOL isQueuingNotifications;
 
 @end

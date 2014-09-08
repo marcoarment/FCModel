@@ -25,8 +25,7 @@
     [self.collectionView registerNib:cellNib forCellWithReuseIdentifier:@"PersonCell"];
     
     [self reloadPeople:nil];
-    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(reloadPeople:) name:FCModelInsertNotification object:Person.class];
-    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(reloadPeople:) name:FCModelDeleteNotification object:Person.class];
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(reloadPeople:) name:FCModelChangeNotification object:Person.class];
 }
 
 - (void)reloadPeople:(NSNotification *)notification
@@ -38,20 +37,15 @@
 
 - (void)dealloc
 {
-    [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelInsertNotification object:Person.class];
-    [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelDeleteNotification object:Person.class];
+    [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelChangeNotification object:Person.class];
 }
 
 #pragma mark - UITextFieldDelegate
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField
 {
-    [textField resignFirstResponder];
-    
-    NSError *error = [Person executeUpdateQuery:self.queryField.text];
-    if (error) {
-        [[[UIAlertView alloc] initWithTitle:@"Query Failed" message:error.localizedDescription delegate:nil cancelButtonTitle:@"Oops" otherButtonTitles:nil] show];
-    }
+    [textField resignFirstResponder];    
+    [Person executeUpdateQuery:self.queryField.text];
     return NO;
 }
 

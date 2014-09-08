@@ -14,6 +14,8 @@
 #import "FMDatabase.h"
 #endif
 
+extern NSString * const FCModelException;
+
 @class FCModelFieldInfo;
 
 // These notifications use the relevant model's Class as the "object" for convenience so observers can,
@@ -23,40 +25,17 @@
 //
 // Or set object to nil to get notified of operations to all FCModels.
 //
-extern NSString * const FCModelInsertNotification;
-extern NSString * const FCModelUpdateNotification;
-extern NSString * const FCModelDeleteNotification;
-extern NSString * const FCModelAnyChangeNotification; // Any insert, update, delete, dataWasUpdatedExternally, or executeUpdateQuery:.
+extern NSString * const FCModelChangeNotification; // Any insert, update, or delete in the table.
 //
-// userInfo[FCModelInstanceSetKey] is an NSSet containing the specific FCModel instance(s) acted upon.
-// The set will always contain exactly one instance, except:
-//  - If you use begin/endNotificationBatchAndNotify, it will contain all instances that received the notification during the batch.
-//  - For dataWasUpdatedExternally/executeUpdateQuery:, it will contain all loaded instances of the class.
+// userInfo[FCModelInstanceKey] is the specific FCModel instance that has changed. If this key is absent, multiple instances may have changed.
 //
-extern NSString * const FCModelInstanceSetKey;
+extern NSString * const FCModelInstanceKey;
 //
-// userInfo[FCModelChangedFieldsByInstanceKey] is an NSSet of NSString field names.
+// userInfo[FCModelChangedFieldsKey] is an NSSet of NSString field names.
 // "Changed" field names may be overly inclusive: all named fields may not *actually* have changed, but all actual changes will be in the set.
 //
 extern NSString * const FCModelChangedFieldsKey;
 
-
-// During dataWasUpdatedExternally and executeUpdateQuery:, this is called immediately before FCModel tells all loaded
-//  instances of the affected class to reload themselves. Reloading can be time-consuming if many instances are in memory,
-//  so this is a good time to release any unnecessarily retained instances so they don't need to go through the reload.
-// The notification's object is the affected class.
-//
-// (You probably don't need to care about this. Until you do.)
-//
-extern NSString * const FCModelWillReloadNotification;
-
-
-typedef NS_ENUM(NSInteger, FCModelSaveResult) {
-    FCModelSaveFailed = 0, // SQLite refused a query. Check .lastSQLiteError
-    FCModelSaveRefused,    // The instance blocked the operation from a should* method.
-    FCModelSaveSucceeded,
-    FCModelSaveNoChanges
-};
 
 @interface FCModel : NSObject
 
@@ -65,37 +44,20 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 @property (readonly) BOOL hasUnsavedChanges;
 @property (readonly) BOOL existsInDatabase; // either deleted or never saved
 @property (readonly) BOOL isDeleted;
-@property (readonly) NSError *lastSQLiteError;
 
-+ (void)openDatabaseAtPath:(NSString *)path withSchemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
 + (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
 
 + (NSArray *)databaseFieldNames;
 + (NSString *)primaryKeyFieldName;
 
-// Be careful with this -- the array could be out of date by the time you use it
-//  if a new instance is loaded by another thread. Everything in it is guaranteed
-//  to be a loaded instance, but you're not guaranteed to always have *all* of them
-//  if you perform SELECTs from multiple threads.
-+ (NSArray *)allLoadedInstances;
-
 // Feel free to operate on the same database object with your own queries. They'll be
 //  executed synchronously on FCModel's private database-operation queue.
-//  (IMPORTANT: READ THE NEXT METHOD DEFINITION)
+//
 + (void)inDatabaseSync:(void (^)(FMDatabase *db))block;
 
-// Call if you perform INSERT/UPDATE/DELETE on any FCModel table outside of the instance*/save
-// methods. This will cause any instances in existence to reload their data from the database.
+// Convenience method that offers $T/$PK parsing when doing manual batch updates
 //
-//  - Call on a subclass to reload all instances of that model and any subclasses.
-//  - Call on FCModel to reload all instances of ALL models.
-//
-+ (void)dataWasUpdatedExternally;
-
-// Or use this convenience method, which calls dataWasUpdatedExternally automatically and offers $T/$PK parsing.
-// If you don't know which tables will be affected, or if it will affect more than one, call on FCModel, not a subclass.
-// Only call on a subclass if only that model's table will be affected.
-+ (NSError *)executeUpdateQuery:(NSString *)query, ...;
++ (void)executeUpdateQuery:(NSString *)query, ...;
 
 // CRUD basics
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue; // will create if nonexistent
@@ -103,9 +65,8 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 - (NSArray *)changedFieldNames;
 - (void)revertUnsavedChanges;
 - (void)revertUnsavedChangeToFieldName:(NSString *)fieldName;
-- (FCModelSaveResult)delete;
-- (FCModelSaveResult)save;
-+ (void)saveAll; // Resolved by class: call on FCModel to save all, on a subclass to save just those and their subclasses, etc.
+- (void)delete;
+- (BOOL)save; // returns YES if there were any changes
 
 // SELECTs
 // - "keyed" variants return dictionaries keyed by each instance's primary-key value.
@@ -152,17 +113,8 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (id)cachedObjectWithIdentifier:(id)identifier generator:(id (^)(void))generatorBlock;
 + (id)cachedObjectWithIdentifier:(id)identifier ignoreFieldsForInvalidation:(NSSet *)ignoredFields generator:(id (^)(void))generatorBlock;
 
-// For subclasses to override, all optional:
-
+// For subclasses to override, optional:
 - (void)didInit;
-- (BOOL)shouldInsert;
-- (BOOL)shouldUpdate;
-- (BOOL)shouldDelete;
-- (void)didInsert;
-- (void)didUpdate;
-- (void)didDelete;
-- (void)saveWasRefused;
-- (void)saveDidFail;
 
 // To create new records with supplied primary-key values, call instanceWithPrimaryKey:, then save when done
 //  setting other fields.
@@ -189,51 +141,12 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 - (id)serializedDatabaseRepresentationOfValue:(id)instanceValue forPropertyNamed:(NSString *)propertyName;
 - (id)unserializedRepresentationOfDatabaseValue:(id)databaseValue forPropertyNamed:(NSString *)propertyName;
 
-// Called on subclasses if there's a reload conflict:
-//  - The instance changes field X but doesn't save the changes to the database.
-//  - Database updates are executed outside of FCModel that cause instances to reload their data.
-//  - This instance's value for field X in the database is different from the unsaved value it has.
+// Transactions:
+//  - Cannot be nested
+//  - Enqueue and coalesce change notifications until commit (and are discarded if the transaction is rolled back)
+//  - Do not automatically "revert" changed model instances in memory after rolled-back value changes
 //
-// The default implementation raises an exception, so implement this if you use +dataWasUpdatedExternally or +executeUpdateQuery,
-//  and don't call super.
-//
-- (id)valueOfFieldName:(NSString *)fieldName byResolvingReloadConflictWithDatabaseValue:(id)valueInDatabase;
-
-// Notification batches and queuing:
-//
-// A common pattern is to listen for FCModelInsert/Update/DeleteNotification and reload a table or take other expensive UI operations.
-// When small numbers of instances are updated/deleted during normal use, that's fine. But when doing a large operation in which
-//  hundreds or thousands of instances might be changed, responding to these notifications may cause noticeable performance problems.
-//
-// Using this batch-queuing system, you can temporarily suspend delivery of these notifications, then deliver or discard them.
-// Multiple identical notification types for each class will be collected into one. For instance:
-//
-// Without notification batching:
-//
-//     FCModelInsertNotification: Person class, { Sue }
-//     FCModelUpdateNotification: Person class, { Robert }
-//     FCModelUpdateNotification: Person class, { Sarah }
-//     FCModelUpdateNotification: Person class, { James }
-//     FCModelUpdateNotification: Person class, { Kate }
-//     FCModelDeleteNotification: Person class, { Richard }
-//
-// With notification batching:
-//
-//     FCModelInsertNotification: Person class, { Sue }
-//     FCModelUpdateNotification: Person class, { Robert, Sarah, James, Kate }
-//     FCModelDeleteNotification: Person class, { Richard }
-//
-// Be careful: batch notification order is not preserved, and you may be unexpectedly interacting with deleted instances.
-// Always check the given instances' .existsInDatabase property.
-//
-// NOTE: Notification batching is thread-local. Operations performed in other threads will still send notifications normally.
-//
-+ (void)performWithBatchedNotifications:(void (^)())block deliverOnCompletion:(BOOL)deliverNotifications;
-+ (void)performWithBatchedNotifications:(void (^)())block; // equivalent to performWithBatchedNotifications:deliverOnCompletion:YES
-
-// Deprecated original call style. Will be removed imminently:
-+ (void)beginNotificationBatch DEPRECATED_ATTRIBUTE;
-+ (void)endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications DEPRECATED_ATTRIBUTE;
++ (void)performTransaction:(BOOL (^)())block; // return YES to commit, NO to roll back
 
 // Field info: You probably won't need this most of the time, but it's nice to have sometimes. FCModel's generating this privately
 //  anyway, so you might as well have read-only access to it if it can help you avoid some code. (I've already needed it.)
@@ -241,23 +154,13 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (FCModelFieldInfo *)infoForFieldName:(NSString *)fieldName;
 
 // Closing the database is not necessary in most cases. Only close it if you need to, such as if you need to delete and recreate
-//  the database file. Caveats:
-//     - Any FCModel call after closing will bizarrely fail until you call openDatabaseAtPath: again.
-//     - Any FCModel instances retained by any other parts of your code at the time of closing will become abandoned and untracked.
-//        The uniqueness guarantee will be broken, and operations on those instances will have undefined behavior. You really don't
-//        want this, and it may raise an exception in the future.
+//  the database file. Warning: Any FCModel call after closing will bizarrely fail until you call openDatabaseAtPath: again.
 //
-//        Until then, having any resident FCModel instances at the time of closing the database will result in scary console warnings
-//        and a return value of NO, which you should take as a condescending judgment and should fix immediately.
-//
-// Returns YES if there were no resident FCModel instances.
-//
-+ (BOOL)closeDatabase;
++ (void)closeDatabase;
 
 // If you try to use FCModel while the database is closed, an error will be logged to the console on any relevant calls.
 // Read/info/SELECT methods will return nil when possible, but these will throw exceptions:
 //  -save
-//  +saveAll
 //  -delete
 //  -executeUpdateQuery:
 //  -inDatabaseSync:
