@@ -75,8 +75,4 @@
     [self execOnSelfSync:[self databaseBlockWithBlock:block]];
 }
 
-- (void)inDatabaseAsync:(void (^)(FMDatabase *db))block {
-    [self addOperation:[NSBlockOperation blockOperationWithBlock:[self databaseBlockWithBlock:block]]];
-}
-
 @end
