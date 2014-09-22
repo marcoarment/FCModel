@@ -347,7 +347,16 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return error;
 }
 
-+ (id)_instancesWhere:(NSString *)query andArgs:(va_list)args orArgsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
++ (id)_instancesWhere:(NSString *)whereQuery andArgs:(va_list)args orArgsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
+{
+    NSString *query = whereQuery ?
+        [self expandQuery:[@"SELECT * FROM \"$T\" WHERE " stringByAppendingString:whereQuery]] :
+        [self expandQuery:@"SELECT * FROM \"$T\""];
+
+    return [self _instancesWithQuery:query andArgs:args orArgsArray:argsArray orResultSet:existingResultSet onlyFirst:onlyFirst keyed:keyed];
+}
+
++ (id)_instancesWithQuery:(NSString *)query andArgs:(va_list)args orArgsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
 
@@ -377,11 +386,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     } else {
         [g_databaseQueue inDatabase:^(FMDatabase *db) {
             FMResultSet *s = [db
-                executeQuery:(
-                    query ?
-                    [self expandQuery:[@"SELECT * FROM \"$T\" WHERE " stringByAppendingString:query]] :
-                    [self expandQuery:@"SELECT * FROM \"$T\""]
-                )
+                executeQuery:query
                 withArgumentsInArray:argsArray
                 orDictionary:nil
                 orVAList:args
@@ -392,7 +397,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             [s close];
         }];
     }
-    
+
     return onlyFirst ? instance : (keyed ? keyedInstances : instances);
 }
 
@@ -496,6 +501,38 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:instances.count];
     for (FCModel *instance in instances) [dictionary setObject:instance forKey:instance.primaryKey];
     return dictionary;
+}
+
++ (instancetype)firstInstanceForQuery:(NSString *)query, ...
+{
+    va_list args;
+    va_start(args, query);
+    id result = [self _instancesWithQuery:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO];
+    va_end(args);
+    return result;
+}
+
++ (NSArray *)instancesForQuery:(NSString *)query, ...
+{
+    va_list args;
+    va_start(args, query);
+    NSArray *results = [self _instancesWithQuery:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
+    va_end(args);
+    return results;
+}
+
++ (NSArray *)instancesForQuery:(NSString *)query arguments:(NSArray *)array
+{
+    return [self _instancesWithQuery:query andArgs:NULL orArgsArray:array orResultSet:NULL onlyFirst:NO keyed:NO];
+}
+
++ (NSDictionary *)keyedInstancesForQuery:(NSString *)query, ...
+{
+    va_list args;
+    va_start(args, query);
+    NSDictionary *results = [self _instancesWithQuery:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES];
+    va_end(args);
+    return results;
 }
 
 + (NSUInteger)numberOfInstances
