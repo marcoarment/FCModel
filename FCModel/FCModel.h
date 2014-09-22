@@ -136,6 +136,13 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
 + (NSDictionary *)keyedInstancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
 
+// Free-form queries. Make sure to use only read queries.
+// Also make sure that result of query contains all columns of corresponding class/table.
++ (instancetype)firstInstanceForQuery:(NSString *)query, ...;
++ (NSArray *)instancesForQuery:(NSString *)query, ...;
++ (NSArray *)instancesForQuery:(NSString *)query arguments:(NSArray *)array;
++ (NSDictionary *)keyedInstancesForQuery:(NSString *)query, ...;
+
 // Return data instead of completed objects (convenient accessors to FCModel's database queue with $T/$PK parsing)
 + (NSArray *)resultDictionariesFromQuery:(NSString *)query, ...;
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...;
