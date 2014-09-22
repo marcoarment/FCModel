@@ -722,6 +722,10 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 // Conflict if the value isn't equal to the new DB value.
                 if (unsavedChangeValue == NSNull.null) unsavedChangeValue = nil;
 
+                if (! [unsavedChangeValue isKindOfClass:[fieldValue class]]) {
+                    unsavedChangeValue = [self encodedValueForFieldName:fieldName];
+                }
+
                 if (unsavedChangeValue != fieldValue && ((! unsavedChangeValue || ! fieldValue) || ! [fieldValue isEqual:unsavedChangeValue])) {
                     // Conflict: model was loaded from DB, modified without being saved, and now the reload wants to set a different value
                     fieldValue = [self valueOfFieldName:fieldName byResolvingReloadConflictWithDatabaseValue:fieldValue];
