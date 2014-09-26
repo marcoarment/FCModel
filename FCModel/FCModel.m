@@ -347,6 +347,21 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return error;
 }
 
++ (NSError *)executeUpdateQuery:(NSString *)query arguments:(NSArray *)arguments
+{
+    checkForOpenDatabaseFatal(YES);
+
+    __block BOOL success = NO;
+    __block NSError *error = nil;
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        success = [db executeUpdate:[self expandQuery:query] error:nil withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
+        if (! success) error = [db.lastError copy];
+    }];
+
+    if (success) [self dataWasUpdatedExternally];
+    return error;
+}
+
 + (id)_instancesWhere:(NSString *)query andArgs:(va_list)args orArgsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
