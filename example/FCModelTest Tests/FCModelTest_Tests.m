@@ -229,6 +229,8 @@
     insertModel.name = @"insert";
     [insertModel save];
     
+    XCTAssertFalse([FCModel isBatchingNotificationsForCurrentThread]);
+    
     XCTAssert(insertNotificationsNoClass == 1, @"[1] Received %d insert classless notifications",    insertNotificationsNoClass);
     XCTAssert(insertNotificationsClass1  == 1, @"[1] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
     XCTAssert(insertNotificationsClass2  == 0, @"[1] Received %d insert SimplerModel notifications", insertNotificationsClass2);
@@ -331,7 +333,10 @@
         [nc addObserverForName:FCModelAnyChangeNotification object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsClass2++;  }],
     ];
 
+    XCTAssertFalse([FCModel isBatchingNotificationsForCurrentThread]);
     [FCModel performWithBatchedNotifications:^{
+        XCTAssertTrue([FCModel isBatchingNotificationsForCurrentThread]);
+
         SimpleModel *insertModel = [SimpleModel new];
         insertModel.name = @"insert";
         [insertModel save];
@@ -412,6 +417,8 @@
         XCTAssert(anyChgNotificationsClass1  == 0, @"[5] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
         XCTAssert(anyChgNotificationsClass2  == 0, @"[5] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
     } deliverOnCompletion:YES];
+
+    XCTAssertFalse([FCModel isBatchingNotificationsForCurrentThread]);
     
     XCTAssert(insertNotificationsNoClass == 2, @"[6] Received %d insert classless notifications",    insertNotificationsNoClass);
     XCTAssert(insertNotificationsClass1  == 1, @"[6] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
@@ -443,6 +450,8 @@
             changedFieldsClass2 = n.userInfo[FCModelChangedFieldsKey];
         }],
     ];
+
+    XCTAssertFalse([FCModel isBatchingNotificationsForCurrentThread]);
     
     NSSet *allClass1Fields = [NSSet setWithArray:SimpleModel.databaseFieldNames];
     NSSet *allClass2Fields = [NSSet setWithArray:SimplerModel.databaseFieldNames];

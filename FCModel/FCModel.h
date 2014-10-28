@@ -230,6 +230,7 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 //
 + (void)performWithBatchedNotifications:(void (^)())block deliverOnCompletion:(BOOL)deliverNotifications;
 + (void)performWithBatchedNotifications:(void (^)())block; // equivalent to performWithBatchedNotifications:deliverOnCompletion:YES
++ (BOOL)isBatchingNotificationsForCurrentThread;
 
 // Deprecated original call style. Will be removed imminently:
 + (void)beginNotificationBatch DEPRECATED_ATTRIBUTE;
