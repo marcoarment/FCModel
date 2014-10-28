@@ -775,12 +775,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     if (oldValue) [self decodeFieldValue:oldValue intoPropertyName:fieldName];
 }
 
-- (void)dealloc
-{
-    [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelReloadNotification object:self.class];
-    [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelSaveNotification object:self.class];
-}
-
+- (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
 - (BOOL)existsInDatabase  { return existsInDatabase; }
 - (BOOL)hasUnsavedChanges { return ! existsInDatabase || self.unsavedChanges.count; }
 
