@@ -92,10 +92,11 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 //
 + (void)dataWasUpdatedExternally;
 
-// Or use this convenience method, which calls dataWasUpdatedExternally automatically and offers $T/$PK parsing.
+// Or use one of these convenience methods, which calls dataWasUpdatedExternally automatically and offers $T/$PK parsing.
 // If you don't know which tables will be affected, or if it will affect more than one, call on FCModel, not a subclass.
 // Only call on a subclass if only that model's table will be affected.
 + (NSError *)executeUpdateQuery:(NSString *)query, ...;
++ (NSError *)executeUpdateQuery:(NSString *)query arguments:(NSArray *)arguments;
 
 // CRUD basics
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue; // will create if nonexistent
