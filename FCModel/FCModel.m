@@ -414,9 +414,14 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return onlyFirst ? instance : (keyed ? keyedInstances : instances);
 }
 
++ (NSArray *)allInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO]; }
++ (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES]; }
 + (NSArray *)instancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:NO]; }
 + (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:YES]; }
 + (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:YES keyed:NO]; }
++ (instancetype)firstInstanceWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query andArgs:NULL orArgsArray:args orResultSet:nil onlyFirst:YES keyed:NO]; }
++ (NSArray *)instancesWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query andArgs:NULL orArgsArray:args orResultSet:NULL onlyFirst:NO keyed:NO]; }
++ (NSDictionary *)keyedInstancesWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query andArgs:NULL orArgsArray:args orResultSet:NULL onlyFirst:NO keyed:YES]; }
 
 + (instancetype)firstInstanceWhere:(NSString *)query, ...
 {
@@ -434,11 +439,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSArray *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
     va_end(args);
     return results;
-}
-
-+ (NSArray *)instancesWhere:(NSString *)query arguments:(NSArray *)array;
-{
-    return [self _instancesWhere:query andArgs:NULL orArgsArray:array orResultSet:NULL onlyFirst:NO keyed:NO];
 }
 
 + (NSDictionary *)keyedInstancesWhere:(NSString *)query, ...
@@ -468,8 +468,15 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return result;
 }
 
-+ (NSArray *)allInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO]; }
-+ (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES]; }
++ (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)args
+{
+    return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:queryAfterORDERBY] andArgs:NULL orArgsArray:args orResultSet:nil onlyFirst:YES keyed:NO];
+}
+
++ (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)args
+{
+    return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:queryAfterORDERBY] andArgs:NULL orArgsArray:args orResultSet:nil onlyFirst:NO keyed:NO];
+}
 
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
 {
@@ -542,6 +549,21 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return count;
 }
 
++ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)args
+{
+    __block NSUInteger count = 0;
+    [g_databaseQueue readDatabase:^(FMDatabase *db) {
+        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:args orDictionary:nil orVAList:NULL];
+        if (! s) [self queryFailedInDatabase:db];
+        if ([s next]) {
+            NSNumber *value = [s objectForColumnIndex:0];
+            if (value) count = value.unsignedIntegerValue;
+        }
+        [s close];
+    }];
+    return count;
+}
+
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
@@ -557,6 +579,20 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         [s close];
     }];
     va_end(args);
+    return columnArray;
+}
+
++ (NSArray *)firstColumnArrayFromQuery:(NSString *)query arguments:(NSArray *)arguments
+{
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+    
+    NSMutableArray *columnArray = [NSMutableArray array];
+    [g_databaseQueue readDatabase:^(FMDatabase *db) {
+        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
+        if (! s) [self queryFailedInDatabase:db];
+        while ([s next]) [columnArray addObject:[s objectForColumnIndex:0]];
+        [s close];
+    }];
     return columnArray;
 }
 
@@ -578,6 +614,20 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return rows;
 }
 
++ (NSArray *)resultDictionariesFromQuery:(NSString *)query arguments:(NSArray *)arguments
+{
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+
+    NSMutableArray *rows = [NSMutableArray array];
+    [g_databaseQueue readDatabase:^(FMDatabase *db) {
+        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
+        if (! s) [self queryFailedInDatabase:db];
+        while ([s next]) [rows addObject:s.resultDictionary];
+        [s close];
+    }];
+    return rows;
+}
+
 + (id)firstValueFromQuery:(NSString *)query, ...
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
@@ -593,6 +643,20 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         [s close];
     }];
     va_end(args);
+    return firstValue;
+}
+
++ (id)firstValueFromQuery:(NSString *)query arguments:(NSArray *)arguments
+{
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+
+    __block id firstValue = nil;
+    [g_databaseQueue readDatabase:^(FMDatabase *db) {
+        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
+        if (! s) [self queryFailedInDatabase:db];
+        if ([s next]) firstValue = [[s objectForColumnIndex:0] copy];
+        [s close];
+    }];
     return firstValue;
 }
 
@@ -1265,9 +1329,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 #pragma mark - Batch notification queuing
 
-+ (void)beginNotificationBatch { [self _beginNotificationBatchForThread:NSThread.currentThread]; }
-+ (void)endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications { [self _endNotificationBatchForThread:NSThread.currentThread sendNotifications:sendQueuedNotifications]; }
-
 + (void)_beginNotificationBatchForThread:(NSThread *)thread
 {
     if (thread.threadDictionary[FCModelEnqueuedBatchNotificationsKey]) {
@@ -1294,14 +1355,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 if (result != NSOrderedSame) {
                     if ([left isEqualToString:FCModelAnyChangeNotification]) {
                         result = NSOrderedDescending;
-                    }
-                    else if ([right isEqualToString:FCModelAnyChangeNotification]) {
+                    } else if ([right isEqualToString:FCModelAnyChangeNotification]) {
                         result = NSOrderedAscending;
-                    }
-                    else if ([left isEqualToString:FCModelWillSendAnyChangeNotification]) {
+                    } else if ([left isEqualToString:FCModelWillSendAnyChangeNotification]) {
                         result = NSOrderedAscending;
-                    }
-                    else if ([right isEqualToString:FCModelWillSendAnyChangeNotification]) {
+                    } else if ([right isEqualToString:FCModelWillSendAnyChangeNotification]) {
                         result = NSOrderedDescending;
                     }
                 }

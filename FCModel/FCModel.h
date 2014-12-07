@@ -123,15 +123,20 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs;
 
 + (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE, ...;
++ (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
 + (NSArray *)instancesWhere:(NSString *)queryAfterWHERE, ...;
 + (NSArray *)instancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)array;
 + (NSDictionary *)keyedInstancesWhere:(NSString *)queryAfterWHERE, ...;
++ (NSDictionary *)keyedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
 
 + (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY, ...;
++ (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
 + (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY, ...;
++ (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
 
 + (NSUInteger)numberOfInstances;
 + (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE, ...;
++ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
 
 // Fetch a set of primary keys, i.e. "WHERE key IN (...)"
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
@@ -139,8 +144,11 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 
 // Return data instead of completed objects (convenient accessors to FCModel's database queue with $T/$PK parsing)
 + (NSArray *)resultDictionariesFromQuery:(NSString *)query, ...;
++ (NSArray *)resultDictionariesFromQuery:(NSString *)query arguments:(NSArray *)arguments;
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...;
++ (NSArray *)firstColumnArrayFromQuery:(NSString *)query arguments:(NSArray *)arguments;
 + (id)firstValueFromQuery:(NSString *)query, ...;
++ (id)firstValueFromQuery:(NSString *)query arguments:(NSArray *)arguments;
 
 // These methods use a global query cache (in FCModelCachedObject). Results are cached indefinitely until their
 //  table has any writes or there's a system low-memory warning, at which point they automatically invalidate.
@@ -234,10 +242,6 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (void)performWithBatchedNotifications:(void (^)())block deliverOnCompletion:(BOOL)deliverNotifications;
 + (void)performWithBatchedNotifications:(void (^)())block; // equivalent to performWithBatchedNotifications:deliverOnCompletion:YES
 + (BOOL)isBatchingNotificationsForCurrentThread;
-
-// Deprecated original call style. Will be removed imminently:
-+ (void)beginNotificationBatch DEPRECATED_ATTRIBUTE;
-+ (void)endNotificationBatchAndNotify:(BOOL)sendQueuedNotifications DEPRECATED_ATTRIBUTE;
 
 // Field info: You probably won't need this most of the time, but it's nice to have sometimes. FCModel's generating this privately
 //  anyway, so you might as well have read-only access to it if it can help you avoid some code. (I've already needed it.)
