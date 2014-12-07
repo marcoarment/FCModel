@@ -45,7 +45,7 @@
 - (BOOL)textFieldShouldReturn:(UITextField *)textField
 {
     [textField resignFirstResponder];    
-    [Person executeUpdateQuery:self.queryField.text];
+    [Person executeUpdateQuery:self.queryField.text arguments:nil];
     return NO;
 }
 

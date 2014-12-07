@@ -116,12 +116,12 @@
     NSMutableSet *colorsUsedAlready = [NSMutableSet set];
     
     // Put some data in the table if there's not enough
-    int numPeople = [[Person firstValueFromQuery:@"SELECT COUNT(*) FROM $T"] intValue];
+    int numPeople = [Person numberOfInstances];
     while (numPeople < 26) {
         Person *p = [Person new];
         do {
             p.name = [RandomThings randomName];
-        } while ([Person firstInstanceWhere:@"name = ?", p.name]);
+        } while ([Person firstInstanceWhere:@"name = ?" arguments:@[p.name]]);
         
         
         if (colorsUsedAlready.count >= allColors.count) [colorsUsedAlready removeAllObjects];

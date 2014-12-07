@@ -26,7 +26,6 @@ static FCModelDatabaseQueue *g_databaseQueue = NULL;
 static NSDictionary *g_fieldInfo = NULL;
 static NSDictionary *g_ignoredFieldNames = NULL;
 static NSDictionary *g_primaryKeyFieldName = NULL;
-static BOOL g_currentUpdateIsInternal = NO;
 
 typedef NS_ENUM(char, FCModelInDatabaseStatus) {
     FCModelInDatabaseStatusNotYetInserted = 0,
@@ -38,12 +37,7 @@ typedef NS_ENUM(char, FCModelInDatabaseStatus) {
     FCModelInDatabaseStatus _inDatabaseStatus;
 }
 @property (nonatomic, copy) NSDictionary *_rowValuesInDatabase;
-+ (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields instance:(FCModel *)instance;
-@end
-
-@interface FMDatabase (HackForVAListsSinceThisIsPrivate)
-- (FMResultSet *)executeQuery:(NSString *)sql withArgumentsInArray:(NSArray*)arrayArgs orDictionary:(NSDictionary *)dictionaryArgs orVAList:(va_list)args;
-- (BOOL)executeUpdate:(NSString*)sql error:(NSError**)outErr withArgumentsInArray:(NSArray*)arrayArgs orDictionary:(NSDictionary *)dictionaryArgs orVAList:(va_list)args;
++ (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields;
 @end
 
 static inline void onMainThreadAsync(void (^block)())
@@ -60,19 +54,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         return NO;
     }
     return YES;
-}
-
-static void _sqlite3_update_hook(void *context, int sqlite_operation, char const *db_name, char const *table_name, sqlite3_int64 rowid)
-{
-    if (g_currentUpdateIsInternal) return;
-
-    Class class = NSClassFromString([NSString stringWithCString:table_name encoding:NSUTF8StringEncoding]);
-    if (! class || ! [class isSubclassOfClass:FCModel.class]) return;
-
-    // Can't notify synchronously since we need to ensure that no other database queries are executed before this function returns
-    FCModelDatabaseQueue *queue = (__bridge FCModelDatabaseQueue *) context;
-    if (queue.isQueuingNotifications) [class postChangeNotificationWithChangedFields:nil instance:nil];
-    else dispatch_async(dispatch_get_main_queue(), ^{ [class postChangeNotificationWithChangedFields:nil instance:nil]; });
 }
 
 @interface FCModelFieldInfo ()
@@ -218,13 +199,9 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     return [FCModelCachedObject objectWithModelClass:self cacheIdentifier:identifier ignoreFieldsForInvalidation:ignoredFields generator:generatorBlock].value;
 }
 
-+ (void)executeUpdateQuery:(NSString *)query, ...
++ (void)executeUpdateQuery:(NSString *)query arguments:(NSArray *)args
 {
     checkForOpenDatabaseFatal(YES);
-
-    va_list args;
-    va_list *foolTheStaticAnalyzer = &args;
-    va_start(args, query);
 
     __block BOOL success = NO;
     __block NSDictionary *changedFieldsToNotify = nil;
@@ -232,7 +209,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
         BOOL mustQueueNotificationsLocally = ! g_databaseQueue.isQueuingNotifications;
         if (mustQueueNotificationsLocally) g_databaseQueue.isQueuingNotifications = YES;
         
-        success = [db executeUpdate:[self expandQuery:query] error:nil withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+        success = [db executeUpdate:[self expandQuery:query] withArgumentsInArray:args];
         if (! success) [self queryFailedInDatabase:db];
 
         if (mustQueueNotificationsLocally) {
@@ -251,11 +228,9 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
             }];
         });
     }
-
-    va_end(args);
 }
 
-+ (id)_instancesWhere:(NSString *)query andArgs:(va_list)args orArgsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
++ (id)_instancesWhere:(NSString *)query argsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
 
@@ -291,8 +266,6 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
                     [self expandQuery:@"SELECT * FROM \"$T\""]
                 )
                 withArgumentsInArray:argsArray
-                orDictionary:nil
-                orVAList:args
             ];
             if (! s) [self queryFailedInDatabase:db];
             BOOL stop = NO;
@@ -304,62 +277,24 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     return onlyFirst ? instance : (keyed ? keyedInstances : instances);
 }
 
-+ (NSArray *)instancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:NO]; }
-+ (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:NO keyed:YES]; }
-+ (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:rs onlyFirst:YES keyed:NO]; }
++ (NSArray *)allInstances { return [self _instancesWhere:nil argsArray:nil orResultSet:nil onlyFirst:NO keyed:NO]; }
++ (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil argsArray:nil orResultSet:nil onlyFirst:NO keyed:YES]; }
++ (NSArray *)instancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil argsArray:nil orResultSet:rs onlyFirst:NO keyed:NO]; }
++ (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil argsArray:nil orResultSet:rs onlyFirst:NO keyed:YES]; }
++ (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil argsArray:nil orResultSet:rs onlyFirst:YES keyed:NO]; }
++ (instancetype)firstInstanceWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orResultSet:nil onlyFirst:YES keyed:NO]; }
++ (NSArray *)instancesWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orResultSet:NULL onlyFirst:NO keyed:NO]; }
++ (NSDictionary *)keyedInstancesWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orResultSet:NULL onlyFirst:NO keyed:YES]; }
 
-+ (instancetype)firstInstanceWhere:(NSString *)query, ...
++ (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)args
 {
-    va_list args;
-    va_start(args, query);
-    id result = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO];
-    va_end(args);
-    return result;
+    return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:queryAfterORDERBY] argsArray:args orResultSet:nil onlyFirst:YES keyed:NO];
 }
 
-+ (NSArray *)instancesWhere:(NSString *)query, ...
++ (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)args
 {
-    va_list args;
-    va_start(args, query);
-    NSArray *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
-    va_end(args);
-    return results;
+    return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:queryAfterORDERBY] argsArray:args orResultSet:nil onlyFirst:NO keyed:NO];
 }
-
-+ (NSArray *)instancesWhere:(NSString *)query arguments:(NSArray *)array;
-{
-    return [self _instancesWhere:query andArgs:NULL orArgsArray:array orResultSet:NULL onlyFirst:NO keyed:NO];
-}
-
-+ (NSDictionary *)keyedInstancesWhere:(NSString *)query, ...
-{
-    va_list args;
-    va_start(args, query);
-    NSDictionary *results = [self _instancesWhere:query andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES];
-    va_end(args);
-    return results;
-}
-
-+ (instancetype)firstInstanceOrderedBy:(NSString *)query, ...
-{
-    va_list args;
-    va_start(args, query);
-    id result = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:YES keyed:NO];
-    va_end(args);
-    return result;
-}
-
-+ (NSArray *)instancesOrderedBy:(NSString *)query, ...
-{
-    va_list args;
-    va_start(args, query);
-    id result = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] andArgs:args orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO];
-    va_end(args);
-    return result;
-}
-
-+ (NSArray *)allInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:NO]; }
-+ (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil andArgs:NULL orArgsArray:nil orResultSet:nil onlyFirst:NO keyed:YES]; }
 
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
 {
@@ -380,7 +315,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     void (^fetchChunk)() = ^{
         if (valuesArray.count == 0) return;
         [whereClause appendString:@")"];
-        NSArray *newInstancesThisChunk = [self _instancesWhere:whereClause andArgs:NULL orArgsArray:valuesArray orResultSet:nil onlyFirst:NO keyed:NO];
+        NSArray *newInstancesThisChunk = [self _instancesWhere:whereClause argsArray:valuesArray orResultSet:nil onlyFirst:NO keyed:NO];
         allFoundInstances = allFoundInstances ? [allFoundInstances arrayByAddingObjectsFromArray:newInstancesThisChunk] : newInstancesThisChunk;
         
         // reset state for next chunk
@@ -408,18 +343,15 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 
 + (NSUInteger)numberOfInstances
 {
-    NSNumber *value = [self firstValueFromQuery:@"SELECT COUNT(*) FROM $T"];
+    NSNumber *value = [self firstValueFromQuery:@"SELECT COUNT(*) FROM $T" arguments:nil];
     return value ? value.unsignedIntegerValue : 0;
 }
 
-+ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE, ...
++ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)args
 {
     __block NSUInteger count = 0;
-    va_list args;
-    va_list *foolTheStaticAnalyzer = &args;
-    va_start(args, queryAfterWHERE);
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:args];
         if (! s) [self queryFailedInDatabase:db];
         if ([s next]) {
             NSNumber *value = [s objectForColumnIndex:0];
@@ -427,62 +359,48 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
         }
         [s close];
     }];
-    va_end(args);
-    
     return count;
 }
 
-+ (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...
++ (NSArray *)firstColumnArrayFromQuery:(NSString *)query arguments:(NSArray *)arguments
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
-
+    
     NSMutableArray *columnArray = [NSMutableArray array];
-    va_list args;
-    va_list *foolTheStaticAnalyzer = &args;
-    va_start(args, query);
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
         if (! s) [self queryFailedInDatabase:db];
         while ([s next]) [columnArray addObject:[s objectForColumnIndex:0]];
         [s close];
     }];
-    va_end(args);
     return columnArray;
 }
 
-+ (NSArray *)resultDictionariesFromQuery:(NSString *)query, ...
++ (NSArray *)resultDictionariesFromQuery:(NSString *)query arguments:(NSArray *)arguments
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
 
     NSMutableArray *rows = [NSMutableArray array];
-    va_list args;
-    va_list *foolTheStaticAnalyzer = &args;
-    va_start(args, query);
-        [g_databaseQueue inDatabase:^(FMDatabase *db) {
-            FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
-            if (! s) [self queryFailedInDatabase:db];
-            while ([s next]) [rows addObject:s.resultDictionary];
-            [s close];
-        }];
-    va_end(args);
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
+        if (! s) [self queryFailedInDatabase:db];
+        while ([s next]) [rows addObject:s.resultDictionary];
+        [s close];
+    }];
     return rows;
 }
 
-+ (id)firstValueFromQuery:(NSString *)query, ...
++ (id)firstValueFromQuery:(NSString *)query arguments:(NSArray *)arguments
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
 
     __block id firstValue = nil;
-    va_list args;
-    va_list *foolTheStaticAnalyzer = &args;
-    va_start(args, query);
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
         if (! s) [self queryFailedInDatabase:db];
         if ([s next]) firstValue = [[s objectForColumnIndex:0] copy];
         [s close];
     }];
-    va_end(args);
     return firstValue;
 }
 
@@ -671,10 +589,10 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
             }
         }
 
-        g_currentUpdateIsInternal = YES;
+        g_databaseQueue.isInInternalWrite = YES;
         BOOL success = NO;
         success = [db executeUpdate:query withArgumentsInArray:values];
-        g_currentUpdateIsInternal = NO;
+        g_databaseQueue.isInInternalWrite = NO;
         if (! success) [self.class queryFailedInDatabase:db];
         
         NSDictionary *rowValuesInDatabase = self._rowValuesInDatabase;
@@ -689,7 +607,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
         hadChanges = YES;
     }];
 
-    if (hadChanges) [self.class postChangeNotificationWithChangedFields:changedFields instance:self];
+    if (hadChanges) [self.class postChangeNotificationWithChangedFields:changedFields];
     return hadChanges;
 }
 
@@ -702,15 +620,15 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
         
         __block BOOL success = NO;
         NSString *query = [self.class expandQuery:@"DELETE FROM \"$T\" WHERE \"$PK\" = ?"];
-        g_currentUpdateIsInternal = YES;
+        g_databaseQueue.isInInternalWrite = YES;
         success = [db executeUpdate:query, [self primaryKey]];
-        g_currentUpdateIsInternal = NO;
+        g_databaseQueue.isInInternalWrite = NO;
         if (! success) [self.class queryFailedInDatabase:db];
 
         _inDatabaseStatus = FCModelInDatabaseStatusDeleted;
     }];
 
-    [self.class postChangeNotificationWithChangedFields:nil instance:self];
+    [self.class postChangeNotificationWithChangedFields:nil];
 }
 
 #pragma mark - Utilities
@@ -901,10 +819,10 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     
         g_fieldInfo = [mutableFieldInfo copy];
         g_ignoredFieldNames = [mutableIgnoredFieldNames copy];
-        g_primaryKeyFieldName = [mutablePrimaryKeyFieldName copy];
-        
-        sqlite3_update_hook(db.sqliteHandle, &_sqlite3_update_hook, (__bridge void *)(g_databaseQueue));
+        g_primaryKeyFieldName = [mutablePrimaryKeyFieldName copy];        
     }];
+
+    [g_databaseQueue startMonitoringForExternalChanges];
 }
 
 + (void)closeDatabase
@@ -958,7 +876,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     });
 }
 
-+ (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields instance:(FCModel *)instance
++ (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields
 {
     if (! changedFields) changedFields = [NSSet setWithArray:self.class.databaseFieldNames];
 
@@ -974,6 +892,13 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
             [NSNotificationCenter.defaultCenter postNotificationName:FCModelChangeNotification object:self.class userInfo:@{ FCModelChangedFieldsKey : changedFields }];
         });
     }
+}
+
++ (void)dataChangedExternally
+{
+    [g_fieldInfo enumerateKeysAndObjectsUsingBlock:^(Class modelClass, id obj, BOOL *stop) {
+        [modelClass postChangeNotificationWithChangedFields:nil];
+    }];
 }
 
 @end

@@ -57,7 +57,7 @@ extern NSString * const FCModelChangedFieldsKey;
 
 // Convenience method that offers $T/$PK parsing when doing manual batch updates
 //
-+ (void)executeUpdateQuery:(NSString *)query, ...;
++ (void)executeUpdateQuery:(NSString *)query arguments:(NSArray *)args;
 
 // CRUD basics
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue; // will create if nonexistent
@@ -82,25 +82,24 @@ extern NSString * const FCModelChangedFieldsKey;
 + (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs;
 + (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs;
 
-+ (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE, ...;
-+ (NSArray *)instancesWhere:(NSString *)queryAfterWHERE, ...;
++ (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
 + (NSArray *)instancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)array;
-+ (NSDictionary *)keyedInstancesWhere:(NSString *)queryAfterWHERE, ...;
++ (NSDictionary *)keyedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
 
-+ (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY, ...;
-+ (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY, ...;
++ (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
++ (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
 
 + (NSUInteger)numberOfInstances;
-+ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE, ...;
++ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
 
 // Fetch a set of primary keys, i.e. "WHERE key IN (...)"
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
 + (NSDictionary *)keyedInstancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
 
 // Return data instead of completed objects (convenient accessors to FCModel's database queue with $T/$PK parsing)
-+ (NSArray *)resultDictionariesFromQuery:(NSString *)query, ...;
-+ (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...;
-+ (id)firstValueFromQuery:(NSString *)query, ...;
++ (NSArray *)resultDictionariesFromQuery:(NSString *)query arguments:(NSArray *)arguments;
++ (NSArray *)firstColumnArrayFromQuery:(NSString *)query arguments:(NSArray *)arguments;
++ (id)firstValueFromQuery:(NSString *)query arguments:(NSArray *)arguments;
 
 // These methods use a global query cache (in FCModelCachedObject). Results are cached indefinitely until their
 //  table has any writes or there's a system low-memory warning, at which point they automatically invalidate.

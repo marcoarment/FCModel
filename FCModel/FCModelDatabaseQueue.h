@@ -22,11 +22,13 @@
 @interface FCModelDatabaseQueue : NSOperationQueue
 
 - (instancetype)initWithDatabasePath:(NSString *)filename;
+- (void)startMonitoringForExternalChanges;
 - (void)inDatabase:(void (^)(FMDatabase *db))block;
 - (void)close;
 
 @property (nonatomic, readonly) FMDatabase *database;
 @property (nonatomic, readonly) NSMutableDictionary *enqueuedChangedFieldsByClass;
 @property (nonatomic) BOOL isQueuingNotifications;
+@property (nonatomic) BOOL isInInternalWrite;
 
 @end
