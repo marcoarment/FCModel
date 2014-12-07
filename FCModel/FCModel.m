@@ -1288,13 +1288,35 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     
     if (sendQueuedNotifications && notificationsToSend.count) {
         onMainThreadAsync(^{
+            NSComparator notificationComparator = ^(NSString *left, NSString *right) {
+                NSComparisonResult result = [left compare:right];
+
+                if (result != NSOrderedSame) {
+                    if ([left isEqualToString:FCModelAnyChangeNotification]) {
+                        result = NSOrderedDescending;
+                    }
+                    else if ([right isEqualToString:FCModelAnyChangeNotification]) {
+                        result = NSOrderedAscending;
+                    }
+                    else if ([left isEqualToString:FCModelWillSendAnyChangeNotification]) {
+                        result = NSOrderedAscending;
+                    }
+                    else if ([right isEqualToString:FCModelWillSendAnyChangeNotification]) {
+                        result = NSOrderedDescending;
+                    }
+                }
+
+                return result;
+            };
+
             [notificationsToSend enumerateKeysAndObjectsUsingBlock:^(Class class, NSDictionary *notificationsForClass, BOOL *stopOuter) {
-                [notificationsForClass enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSSet *objects, BOOL *stopInner) {
-                    [NSNotificationCenter.defaultCenter postNotificationName:name object:class userInfo:@{
-                        FCModelInstanceSetKey : objects,
+                NSArray *keys = [notificationsForClass.allKeys sortedArrayUsingComparator:notificationComparator];
+                for (NSString *key in keys) {
+                    [NSNotificationCenter.defaultCenter postNotificationName:key object:class userInfo:@{
+                        FCModelInstanceSetKey : notificationsForClass[key],
                         FCModelChangedFieldsKey : changedFields[class]
                     }];
-                }];
+                }
             }];
         });
     }
