@@ -22,8 +22,9 @@
 @interface FCModelDatabaseQueue : NSOperationQueue
 
 - (instancetype)initWithDatabasePath:(NSString *)filename;
-- (void)inDatabase:(void (^)(FMDatabase *db))block;
-- (void)inDatabaseAsync:(void (^)(FMDatabase *db))block;
+- (void)startMonitoringForExternalChanges;
+- (void)readDatabase:(void (^)(FMDatabase *db))block;
+- (void)writeDatabase:(void (^)(FMDatabase *db))block;
 - (void)close;
 
 @property (nonatomic, readonly) FMDatabase *database;

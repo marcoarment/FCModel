@@ -185,7 +185,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 + (instancetype)instanceFromDatabaseWithPrimaryKey:(id)key
 {
     __block FCModel *model = NULL;
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+    [g_databaseQueue readDatabase:^(FMDatabase *db) {
         FMResultSet *s = [db executeQuery:[self expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], key];
         if (! s) [self queryFailedInDatabase:db];
         if ([s next]) model = [[self alloc] initWithFieldValues:s.resultDictionary existsInDatabaseAlready:YES];
@@ -340,7 +340,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
     __block BOOL success = NO;
     __block NSError *error = nil;
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+    [g_databaseQueue writeDatabase:^(FMDatabase *db) {
         success = [db executeUpdate:[self expandQuery:query] error:nil withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
         if (! success) error = [db.lastError copy];
     }];
@@ -356,7 +356,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
     __block BOOL success = NO;
     __block NSError *error = nil;
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+    [g_databaseQueue writeDatabase:^(FMDatabase *db) {
         success = [db executeUpdate:[self expandQuery:query] error:nil withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
         if (! success) error = [db.lastError copy];
     }];
@@ -393,7 +393,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         BOOL stop = NO;
         while (! stop && [existingResultSet next]) processResult(existingResultSet, &stop);
     } else {
-        [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        [g_databaseQueue readDatabase:^(FMDatabase *db) {
             FMResultSet *s = [db
                 executeQuery:(
                     query ?
@@ -528,7 +528,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
     va_start(args, queryAfterWHERE);
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+    [g_databaseQueue readDatabase:^(FMDatabase *db) {
         FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
         if (! s) [self queryFailedInDatabase:db];
         if ([s next]) {
@@ -550,7 +550,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
     va_start(args, query);
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+    [g_databaseQueue readDatabase:^(FMDatabase *db) {
         FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
         if (! s) [self queryFailedInDatabase:db];
         while ([s next]) [columnArray addObject:[s objectForColumnIndex:0]];
@@ -568,7 +568,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
     va_start(args, query);
-        [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        [g_databaseQueue readDatabase:^(FMDatabase *db) {
             FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
             if (! s) [self queryFailedInDatabase:db];
             while ([s next]) [rows addObject:s.resultDictionary];
@@ -586,7 +586,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
     va_start(args, query);
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+    [g_databaseQueue readDatabase:^(FMDatabase *db) {
         FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
         if (! s) [self queryFailedInDatabase:db];
         if ([s next]) firstValue = [[s objectForColumnIndex:0] copy];
@@ -710,7 +710,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
     __block NSDictionary *resultDictionary = nil;
 
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+    [g_databaseQueue readDatabase:^(FMDatabase *db) {
         FMResultSet *s = [db executeQuery:[self.class expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], self.primaryKey];
         if (! s) [self.class queryFailedInDatabase:db];
         if ([s next]) {
@@ -837,7 +837,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block FCModelSaveResult result;
     __block BOOL update;
     __block NSSet *changedFields = nil;
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+    [g_databaseQueue writeDatabase:^(FMDatabase *db) {
     
         NSDictionary *changes = self.unsavedChanges;
         BOOL dirty = changes.count;
@@ -966,7 +966,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSThread *sourceThread = NSThread.currentThread;
     __block FCModelSaveResult result;
     __block NSSet *changedFields;
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+    [g_databaseQueue writeDatabase:^(FMDatabase *db) {
         if (deleted) { result = FCModelSaveNoChanges; return; }
         
         if (! [self shouldDelete]) {
@@ -1066,7 +1066,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSMutableDictionary *mutableIgnoredFieldNames = [NSMutableDictionary dictionary];
     NSMutableDictionary *mutablePrimaryKeyFieldName = [NSMutableDictionary dictionary];
     
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+    [g_databaseQueue writeDatabase:^(FMDatabase *db) {
+        [[db executeQuery:@"PRAGMA busy_timeout = 10000"] close];
+        
         if (databaseInitializer) databaseInitializer(db);
 
         int startingSchemaVersion = 0;
@@ -1221,6 +1223,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         g_ignoredFieldNames = [mutableIgnoredFieldNames copy];
         g_primaryKeyFieldName = [mutablePrimaryKeyFieldName copy];
     }];
+    
+    [g_databaseQueue startMonitoringForExternalChanges];
 }
 
 + (BOOL)closeDatabase
@@ -1256,7 +1260,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 + (void)inDatabaseSync:(void (^)(FMDatabase *db))block
 {
     checkForOpenDatabaseFatal(YES);
-    [g_databaseQueue inDatabase:block];
+    [g_databaseQueue readDatabase:block];
 }
 
 #pragma mark - Batch notification queuing
