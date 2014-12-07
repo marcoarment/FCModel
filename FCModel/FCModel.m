@@ -33,6 +33,7 @@ static NSString * const FCModelEnqueuedBatchChangedFieldsKey   = @"FCModelEnqueu
 
 static FCModelDatabaseQueue *g_databaseQueue = NULL;
 static NSDictionary *g_fieldInfo = NULL;
+static NSDictionary *g_ignoredFieldNames = NULL;
 static NSDictionary *g_primaryKeyFieldName = NULL;
 static NSSet *g_tablesUsingAutoIncrementEmulation = NULL;
 static NSMutableDictionary *g_instances = NULL;
@@ -105,6 +106,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 - (void)didDelete { }
 - (void)saveWasRefused { }
 - (void)saveDidFail { }
++ (NSSet *)ignoredFieldNames { return [NSSet set]; }
 
 #pragma mark - Instance tracking and uniquing
 
@@ -728,9 +730,10 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         [self.class postChangeNotification:FCModelDeleteNotification changedFields:[NSSet setWithArray:self.class.databaseFieldNames] instance:self sourceThread:NSThread.currentThread];
     } else {
         NSDictionary *unsavedChanges = self.unsavedChanges;
+        NSSet *ignoredFieldNames = g_ignoredFieldNames[NSStringFromClass(self.class)];
 
         [resultDictionary enumerateKeysAndObjectsUsingBlock:^(NSString *fieldName, id fieldValue, BOOL *stop) {
-            if ([fieldName isEqualToString:g_primaryKeyFieldName[self.class]]) return;
+            if ([fieldName isEqualToString:g_primaryKeyFieldName[self.class]] || (ignoredFieldNames && [ignoredFieldNames containsObject:fieldName])) return;
             fieldValue = fieldValue == NSNull.null ? nil : fieldValue;
             
             id unsavedChangeValue = unsavedChanges[fieldName];
@@ -1060,6 +1063,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 {
     g_databaseQueue = [[FCModelDatabaseQueue alloc] initWithDatabasePath:path];
     NSMutableDictionary *mutableFieldInfo = [NSMutableDictionary dictionary];
+    NSMutableDictionary *mutableIgnoredFieldNames = [NSMutableDictionary dictionary];
     NSMutableDictionary *mutablePrimaryKeyFieldName = [NSMutableDictionary dictionary];
     
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
@@ -1098,19 +1102,24 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             NSString *primaryKeyName = nil;
             int primaryKeyColumnCount = 0;
             NSMutableDictionary *fields = [NSMutableDictionary dictionary];
+            NSMutableSet *ignoredFieldNames = [([tableModelClass ignoredFieldNames] ?: [NSSet set]) mutableCopy];
+            
             FMResultSet *columnsRS = [db executeQuery:[NSString stringWithFormat: @"PRAGMA table_info('%@')", tableName]];
             while ([columnsRS next]) {
                 NSString *fieldName = [columnsRS stringForColumnIndex:1];
+                if ([ignoredFieldNames containsObject:fieldName]) continue;
                 
                 objc_property_t property = class_getProperty(tableModelClass, fieldName.UTF8String);
                 if (! property) {
                     NSLog(@"[FCModel] ignoring column %@.%@, no matching model property", tableName, fieldName);
+                    [ignoredFieldNames addObject:fieldName];
                     continue;
                 }
                 
                 NSArray *propertyAttributes = [[NSString stringWithCString:property_getAttributes(property) encoding:NSASCIIStringEncoding]componentsSeparatedByString:@","];
                 if ([propertyAttributes containsObject:@"R"]) {
                     NSLog(@"[FCModel] ignoring column %@.%@, matching model property is readonly", tableName, fieldName);
+                    [ignoredFieldNames addObject:fieldName];
                     continue;
                 }
                 
@@ -1203,10 +1212,13 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             [mutableFieldInfo setObject:fields forKey:classKey];
             [mutablePrimaryKeyFieldName setObject:primaryKeyName forKey:classKey];
             [columnsRS close];
+
+            if (ignoredFieldNames.count) mutableIgnoredFieldNames[tableName] = [ignoredFieldNames copy];
         }
         [tablesRS close];
     
         g_fieldInfo = [mutableFieldInfo copy];
+        g_ignoredFieldNames = [mutableIgnoredFieldNames copy];
         g_primaryKeyFieldName = [mutablePrimaryKeyFieldName copy];
     }];
 }
@@ -1233,6 +1245,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     g_databaseQueue = nil;
     g_primaryKeyFieldName = nil;
     g_fieldInfo = nil;
+    g_ignoredFieldNames = nil;
     g_tablesUsingAutoIncrementEmulation = nil;
     
     return ! modelsAreStillLoaded;
