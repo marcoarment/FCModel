@@ -116,6 +116,8 @@ extern NSString * const FCModelChangedFieldsKey;
 // For subclasses to override, optional:
 - (void)didInit;
 
++ (NSSet *)ignoredFieldNames; // Fields that exist in the table but should not be read into the model. Default empty set, cannot be nil.
+
 // To create new records with supplied primary-key values, call instanceWithPrimaryKey:, then save when done
 //  setting other fields.
 //

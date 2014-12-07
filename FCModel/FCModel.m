@@ -24,6 +24,7 @@ NSString * const FCModelWillSendChangeNotification = @"FCModelWillSendChangeNoti
 
 static FCModelDatabaseQueue *g_databaseQueue = NULL;
 static NSDictionary *g_fieldInfo = NULL;
+static NSDictionary *g_ignoredFieldNames = NULL;
 static NSDictionary *g_primaryKeyFieldName = NULL;
 static BOOL g_currentUpdateIsInternal = NO;
 
@@ -492,6 +493,8 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 
 #pragma mark - Attributes and CRUD
 
++ (NSSet *)ignoredFieldNames { return [NSSet set]; }
+
 + (id)primaryKeyValueForNewInstance
 {
     // Issue random 64-bit signed ints
@@ -747,6 +750,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 {
     g_databaseQueue = [[FCModelDatabaseQueue alloc] initWithDatabasePath:path];
     NSMutableDictionary *mutableFieldInfo = [NSMutableDictionary dictionary];
+    NSMutableDictionary *mutableIgnoredFieldNames = [NSMutableDictionary dictionary];
     NSMutableDictionary *mutablePrimaryKeyFieldName = [NSMutableDictionary dictionary];
     
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
@@ -780,19 +784,24 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
             NSString *primaryKeyName = nil;
             int primaryKeyColumnCount = 0;
             NSMutableDictionary *fields = [NSMutableDictionary dictionary];
+            NSMutableSet *ignoredFieldNames = [([tableModelClass ignoredFieldNames] ?: [NSSet set]) mutableCopy];
+            
             FMResultSet *columnsRS = [db executeQuery:[NSString stringWithFormat: @"PRAGMA table_info('%@')", tableName]];
             while ([columnsRS next]) {
                 NSString *fieldName = [columnsRS stringForColumnIndex:1];
+                if ([ignoredFieldNames containsObject:fieldName]) continue;
                 
                 objc_property_t property = class_getProperty(tableModelClass, fieldName.UTF8String);
                 if (! property) {
                     NSLog(@"[FCModel] ignoring column %@.%@, no matching model property", tableName, fieldName);
+                    [ignoredFieldNames addObject:fieldName];
                     continue;
                 }
                 
                 NSArray *propertyAttributes = [[NSString stringWithCString:property_getAttributes(property) encoding:NSASCIIStringEncoding]componentsSeparatedByString:@","];
                 if ([propertyAttributes containsObject:@"R"]) {
                     NSLog(@"[FCModel] ignoring column %@.%@, matching model property is readonly", tableName, fieldName);
+                    [ignoredFieldNames addObject:fieldName];
                     continue;
                 }
                 
@@ -885,10 +894,13 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
             [mutableFieldInfo setObject:fields forKey:classKey];
             [mutablePrimaryKeyFieldName setObject:primaryKeyName forKey:classKey];
             [columnsRS close];
+
+            if (ignoredFieldNames.count) mutableIgnoredFieldNames[tableName] = [ignoredFieldNames copy];
         }
         [tablesRS close];
     
         g_fieldInfo = [mutableFieldInfo copy];
+        g_ignoredFieldNames = [mutableIgnoredFieldNames copy];
         g_primaryKeyFieldName = [mutablePrimaryKeyFieldName copy];
         
         sqlite3_update_hook(db.sqliteHandle, &_sqlite3_update_hook, (__bridge void *)(g_databaseQueue));
@@ -906,6 +918,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     [FCModelCachedObject clearCache];
     g_primaryKeyFieldName = nil;
     g_fieldInfo = nil;
+    g_ignoredFieldNames = nil;
 }
 
 + (BOOL)databaseIsOpen { return g_databaseQueue != nil; }
