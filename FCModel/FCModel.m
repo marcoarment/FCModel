@@ -199,17 +199,16 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return [FCModelCachedObject objectWithModelClass:self cacheIdentifier:identifier ignoreFieldsForInvalidation:ignoredFields generator:generatorBlock].value;
 }
 
-+ (void)executeUpdateQuery:(NSString *)query arguments:(NSArray *)args
++ (void)_executeUpdateQuery:(NSString *)query withVAList:(va_list)va_args arguments:(NSArray *)array_args
 {
     checkForOpenDatabaseFatal(YES);
 
-    __block BOOL success = NO;
     __block NSDictionary *changedFieldsToNotify = nil;
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
         BOOL mustQueueNotificationsLocally = ! g_databaseQueue.isQueuingNotifications;
         if (mustQueueNotificationsLocally) g_databaseQueue.isQueuingNotifications = YES;
         
-        success = [db executeUpdate:[self expandQuery:query] withArgumentsInArray:args];
+        BOOL success = va_args ? [db executeUpdate:[self expandQuery:query] withVAList:va_args] : [db executeUpdate:[self expandQuery:query] withArgumentsInArray:array_args];
         if (! success) [self queryFailedInDatabase:db];
 
         if (mustQueueNotificationsLocally) {
@@ -229,72 +228,151 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         });
     }
 }
++ (void)executeUpdateQuery:(NSString *)query arguments:(NSArray *)args { [self _executeUpdateQuery:query withVAList:NULL arguments:args]; }
++ (void)executeUpdateQuery:(NSString *)query, ... { va_list args; va_start(args, query); [self _executeUpdateQuery:query withVAList:args arguments:nil]; va_end(args); }
 
-+ (id)_instancesWhere:(NSString *)query argsArray:(NSArray *)argsArray orResultSet:(FMResultSet *)existingResultSet onlyFirst:(BOOL)onlyFirst keyed:(BOOL)keyed
++ (id)_instancesWhere:(NSString *)query argsArray:(NSArray *)argsArray orVAList:(va_list)va_args onlyFirst:(BOOL)onlyFirst
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
-
-    NSMutableArray *instances;
-    NSMutableDictionary *keyedInstances;
+    NSMutableArray *instances = onlyFirst ? nil : [NSMutableArray array];
     __block FCModel *instance = nil;
     
-    if (! onlyFirst) {
-        if (keyed) keyedInstances = [NSMutableDictionary dictionary];
-        else instances = [NSMutableArray array];
-    }
-    
-    void (^processResult)(FMResultSet *, BOOL *) = ^(FMResultSet *s, BOOL *stop){
-        NSDictionary *rowDictionary = s.resultDictionary;
-        instance = [self instanceWithPrimaryKey:rowDictionary[g_primaryKeyFieldName[self]] databaseRowValues:rowDictionary createIfNonexistent:NO];
-        if (onlyFirst) {
-            *stop = YES;
-            return;
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        NSString *pkName = g_primaryKeyFieldName[self];
+        NSString *expandedQuery = query ? [self expandQuery:[@"SELECT * FROM \"$T\" WHERE " stringByAppendingString:query]] : [self expandQuery:@"SELECT * FROM \"$T\""];
+        FMResultSet *s = va_args ? [db executeQuery:expandedQuery withVAList:va_args] : [db executeQuery:expandedQuery withArgumentsInArray:argsArray];
+        if (! s) [self queryFailedInDatabase:db];
+
+        while ([s next]) {
+            NSDictionary *rowDictionary = s.resultDictionary;
+            instance = [self instanceWithPrimaryKey:rowDictionary[pkName] databaseRowValues:rowDictionary createIfNonexistent:NO];
+            if (onlyFirst) break;
+            [instances addObject:instance];
         }
-        if (keyed) [keyedInstances setValue:instance forKey:[instance primaryKey]];
-        else [instances addObject:instance];
-    };
+        [s close];
+    }];
     
-    if (existingResultSet) {
-        BOOL stop = NO;
-        while (! stop && [existingResultSet next]) processResult(existingResultSet, &stop);
-    } else {
-        [g_databaseQueue inDatabase:^(FMDatabase *db) {
-            FMResultSet *s = [db
-                executeQuery:(
-                    query ?
-                    [self expandQuery:[@"SELECT * FROM \"$T\" WHERE " stringByAppendingString:query]] :
-                    [self expandQuery:@"SELECT * FROM \"$T\""]
-                )
-                withArgumentsInArray:argsArray
-            ];
-            if (! s) [self queryFailedInDatabase:db];
-            BOOL stop = NO;
-            while (! stop && [s next]) processResult(s, &stop);
-            [s close];
-        }];
-    }
-    
-    return onlyFirst ? instance : (keyed ? keyedInstances : instances);
+    return onlyFirst ? instance : instances;
 }
 
-+ (NSArray *)allInstances { return [self _instancesWhere:nil argsArray:nil orResultSet:nil onlyFirst:NO keyed:NO]; }
-+ (NSDictionary *)keyedAllInstances { return [self _instancesWhere:nil argsArray:nil orResultSet:nil onlyFirst:NO keyed:YES]; }
-+ (NSArray *)instancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil argsArray:nil orResultSet:rs onlyFirst:NO keyed:NO]; }
-+ (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil argsArray:nil orResultSet:rs onlyFirst:NO keyed:YES]; }
-+ (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs { return [self _instancesWhere:nil argsArray:nil orResultSet:rs onlyFirst:YES keyed:NO]; }
-+ (instancetype)firstInstanceWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orResultSet:nil onlyFirst:YES keyed:NO]; }
-+ (NSArray *)instancesWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orResultSet:NULL onlyFirst:NO keyed:NO]; }
-+ (NSDictionary *)keyedInstancesWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orResultSet:NULL onlyFirst:NO keyed:YES]; }
++ (NSArray *)allInstances { return [self _instancesWhere:nil argsArray:nil orVAList:NULL onlyFirst:NO]; }
++ (instancetype)firstInstanceWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orVAList:NULL onlyFirst:YES]; }
++ (NSArray *)instancesWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orVAList:NULL onlyFirst:NO]; }
+
++ (instancetype)firstInstanceWhere:(NSString *)query, ...
+{
+    va_list args;
+    va_start(args, query);
+    id instance = [self _instancesWhere:query argsArray:nil orVAList:args onlyFirst:YES];
+    va_end(args);
+    return instance;
+}
+
++ (NSArray *)instancesWhere:(NSString *)query, ...
+{
+    va_list args;
+    va_start(args, query);
+    NSArray *instances = [self _instancesWhere:query argsArray:nil orVAList:args onlyFirst:NO];
+    va_end(args);
+    return instances;
+}
+
++ (instancetype)firstInstanceOrderedBy:(NSString *)query, ...
+{
+    va_list args;
+    va_start(args, query);
+    id instance = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] argsArray:nil orVAList:args onlyFirst:YES];
+    va_end(args);
+    return instance;
+}
 
 + (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)args
 {
-    return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:queryAfterORDERBY] argsArray:args orResultSet:nil onlyFirst:YES keyed:NO];
+    return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:queryAfterORDERBY] argsArray:args orVAList:NULL onlyFirst:YES];
+}
+
++ (NSArray *)instancesOrderedBy:(NSString *)query, ...
+{
+    va_list args;
+    va_start(args, query);
+    NSArray *instances = [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] argsArray:nil orVAList:args onlyFirst:NO];
+    va_end(args);
+    return instances;
 }
 
 + (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)args
 {
-    return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:queryAfterORDERBY] argsArray:args orResultSet:nil onlyFirst:NO keyed:NO];
+    return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:queryAfterORDERBY] argsArray:args orVAList:NULL onlyFirst:NO];
 }
+
++ (NSUInteger)_numberOfInstancesWhere:(NSString *)queryAfterWHERE withVAList:(va_list)va_args arguments:(NSArray *)args
+{
+    if (! checkForOpenDatabaseFatal(NO)) return 0;
+    
+    __block NSUInteger count = 0;
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        NSString *expandedQuery = [self expandQuery:(queryAfterWHERE ? [@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE] : @"SELECT COUNT(*) FROM $T")];
+        FMResultSet *s = va_args ? [db executeQuery:expandedQuery withArgumentsInArray:args] : [db executeQuery:expandedQuery withArgumentsInArray:args];
+        if (! s) [self queryFailedInDatabase:db];
+        if ([s next]) {
+            NSNumber *value = [s objectForColumnIndex:0];
+            if (value) count = value.unsignedIntegerValue;
+        }
+        [s close];
+    }];
+    return count;
+}
++ (NSUInteger)numberOfInstancesWhere:(NSString *)query arguments:(NSArray *)args { return [self _numberOfInstancesWhere:query withVAList:NULL arguments:args]; };
++ (NSUInteger)numberOfInstancesWhere:(NSString *)query, ... { va_list args; va_start(args, query); NSUInteger c = [self _numberOfInstancesWhere:query withVAList:args arguments:nil]; va_end(args); return c; }
++ (NSUInteger)numberOfInstances { return [self _numberOfInstancesWhere:nil withVAList:NULL arguments:nil]; }
+
++ (NSArray *)_firstColumnArrayFromQuery:(NSString *)query withVAList:(va_list)va_args arguments:(NSArray *)arguments
+{
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+    
+    NSMutableArray *columnArray = [NSMutableArray array];
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet *s = va_args ? [db executeQuery:[self expandQuery:query] withVAList:va_args] : [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
+        if (! s) [self queryFailedInDatabase:db];
+        while ([s next]) [columnArray addObject:[s objectForColumnIndex:0]];
+        [s close];
+    }];
+    return columnArray;
+}
++ (NSArray *)firstColumnArrayFromQuery:(NSString *)query arguments:(NSArray *)arguments { return [self _firstColumnArrayFromQuery:query withVAList:NULL arguments:arguments]; }
++ (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ... { va_list args; va_start(args, query); NSArray *r = [self _firstColumnArrayFromQuery:query withVAList:args arguments:nil]; va_end(args); return r; }
+
++ (NSArray *)_resultDictionariesFromQuery:(NSString *)query withVAList:(va_list)va_args arguments:(NSArray *)arguments
+{
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+
+    NSMutableArray *rows = [NSMutableArray array];
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet *s = va_args ? [db executeQuery:[self expandQuery:query] withVAList:va_args] : [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
+        if (! s) [self queryFailedInDatabase:db];
+        while ([s next]) [rows addObject:s.resultDictionary];
+        [s close];
+    }];
+    return rows;
+}
++ (NSArray *)resultDictionariesFromQuery:(NSString *)query arguments:(NSArray *)arguments { return [self _resultDictionariesFromQuery:query withVAList:NULL arguments:arguments]; }
++ (NSArray *)resultDictionariesFromQuery:(NSString *)query, ... { va_list args; va_start(args, query); NSArray *r = [self _resultDictionariesFromQuery:query withVAList:args arguments:nil]; va_end(args); return r; }
+
++ (id)_firstValueFromQuery:(NSString *)query withVAList:(va_list)va_args arguments:(NSArray *)arguments
+{
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+
+    __block id firstValue = nil;
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet *s = va_args ? [db executeQuery:[self expandQuery:query] withVAList:va_args] : [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
+        if (! s) [self queryFailedInDatabase:db];
+        if ([s next]) firstValue = [[s objectForColumnIndex:0] copy];
+        [s close];
+    }];
+    return firstValue;
+}
++ (id)firstValueFromQuery:(NSString *)query arguments:(NSArray *)arguments { return [self _firstValueFromQuery:query withVAList:NULL arguments:arguments]; }
++ (id)firstValueFromQuery:(NSString *)query, ... { va_list args; va_start(args, query); id r = [self _firstValueFromQuery:query withVAList:args arguments:nil]; va_end(args); return r; }
 
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
 {
@@ -315,7 +393,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     void (^fetchChunk)() = ^{
         if (valuesArray.count == 0) return;
         [whereClause appendString:@")"];
-        NSArray *newInstancesThisChunk = [self _instancesWhere:whereClause argsArray:valuesArray orResultSet:nil onlyFirst:NO keyed:NO];
+        NSArray *newInstancesThisChunk = [self _instancesWhere:whereClause argsArray:valuesArray orVAList:NULL onlyFirst:NO];
         allFoundInstances = allFoundInstances ? [allFoundInstances arrayByAddingObjectsFromArray:newInstancesThisChunk] : newInstancesThisChunk;
         
         // reset state for next chunk
@@ -339,69 +417,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:instances.count];
     for (FCModel *instance in instances) [dictionary setObject:instance forKey:instance.primaryKey];
     return dictionary;
-}
-
-+ (NSUInteger)numberOfInstances
-{
-    NSNumber *value = [self firstValueFromQuery:@"SELECT COUNT(*) FROM $T" arguments:nil];
-    return value ? value.unsignedIntegerValue : 0;
-}
-
-+ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)args
-{
-    __block NSUInteger count = 0;
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:args];
-        if (! s) [self queryFailedInDatabase:db];
-        if ([s next]) {
-            NSNumber *value = [s objectForColumnIndex:0];
-            if (value) count = value.unsignedIntegerValue;
-        }
-        [s close];
-    }];
-    return count;
-}
-
-+ (NSArray *)firstColumnArrayFromQuery:(NSString *)query arguments:(NSArray *)arguments
-{
-    if (! checkForOpenDatabaseFatal(NO)) return nil;
-    
-    NSMutableArray *columnArray = [NSMutableArray array];
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
-        if (! s) [self queryFailedInDatabase:db];
-        while ([s next]) [columnArray addObject:[s objectForColumnIndex:0]];
-        [s close];
-    }];
-    return columnArray;
-}
-
-+ (NSArray *)resultDictionariesFromQuery:(NSString *)query arguments:(NSArray *)arguments
-{
-    if (! checkForOpenDatabaseFatal(NO)) return nil;
-
-    NSMutableArray *rows = [NSMutableArray array];
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
-        if (! s) [self queryFailedInDatabase:db];
-        while ([s next]) [rows addObject:s.resultDictionary];
-        [s close];
-    }];
-    return rows;
-}
-
-+ (id)firstValueFromQuery:(NSString *)query arguments:(NSArray *)arguments
-{
-    if (! checkForOpenDatabaseFatal(NO)) return nil;
-
-    __block id firstValue = nil;
-    [g_databaseQueue inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
-        if (! s) [self queryFailedInDatabase:db];
-        if ([s next]) firstValue = [[s objectForColumnIndex:0] copy];
-        [s close];
-    }];
-    return firstValue;
 }
 
 + (void)queryFailedInDatabase:(FMDatabase *)db

@@ -57,6 +57,7 @@ extern NSString * const FCModelChangedFieldsKey;
 
 // Convenience method that offers $T/$PK parsing when doing manual batch updates
 //
++ (void)executeUpdateQuery:(NSString *)query, ...;
 + (void)executeUpdateQuery:(NSString *)query arguments:(NSArray *)args;
 
 // CRUD basics
@@ -68,37 +69,36 @@ extern NSString * const FCModelChangedFieldsKey;
 - (void)delete;
 - (BOOL)save; // returns YES if there were any changes
 
-// SELECTs
-// - "keyed" variants return dictionaries keyed by each instance's primary-key value.
-// - "FromResultSet" variants will iterate through the supplied result set, but the caller is still responsible for closing it.
-// - Optional query placeholders:
+// SELECTs allow optional query placeholders:
 //      $T  - This model's table name
 //      $PK - This model's primary-key field name
 //
+// The variadic (...) and non-variadic equivalents otherwise behave identically. "arguments" arrays can be nil.
+//
 + (NSArray *)allInstances;
-+ (NSDictionary *)keyedAllInstances;
-
-+ (NSArray *)instancesFromResultSet:(FMResultSet *)rs;
-+ (NSDictionary *)keyedInstancesFromResultSet:(FMResultSet *)rs;
-+ (instancetype)firstInstanceFromResultSet:(FMResultSet *)rs;
-
++ (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE, ...;
 + (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
++ (NSArray *)instancesWhere:(NSString *)queryAfterWHERE, ...;
 + (NSArray *)instancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)array;
-+ (NSDictionary *)keyedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
 
++ (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY, ...;
 + (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
++ (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY, ...;
 + (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
 
 + (NSUInteger)numberOfInstances;
++ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE, ...;
 + (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
 
 // Fetch a set of primary keys, i.e. "WHERE key IN (...)"
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
-+ (NSDictionary *)keyedInstancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
 
 // Return data instead of completed objects (convenient accessors to FCModel's database queue with $T/$PK parsing)
++ (NSArray *)resultDictionariesFromQuery:(NSString *)query, ...;
 + (NSArray *)resultDictionariesFromQuery:(NSString *)query arguments:(NSArray *)arguments;
++ (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...;
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query arguments:(NSArray *)arguments;
++ (id)firstValueFromQuery:(NSString *)query, ...;
 + (id)firstValueFromQuery:(NSString *)query arguments:(NSArray *)arguments;
 
 // These methods use a global query cache (in FCModelCachedObject). Results are cached indefinitely until their

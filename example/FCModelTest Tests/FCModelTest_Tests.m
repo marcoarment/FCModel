@@ -69,7 +69,7 @@
     [FCModel closeDatabase];
     XCTAssertTrue(! [FCModel databaseIsOpen]);
     XCTAssertTrue([SimpleModel instanceWithPrimaryKey:@"a"] == nil);
-    XCTAssertThrows([SimpleModel executeUpdateQuery:@"UPDATE $T SET name = 'bogus'" arguments:nil]);
+    XCTAssertThrows([SimpleModel executeUpdateQuery:@"UPDATE $T SET name = 'bogus'"]);
 
     [self openDatabase];
     XCTAssertTrue([FCModel databaseIsOpen]);
@@ -150,31 +150,6 @@
     XCTAssertTrue([entity.nullableNumberDefault1 isEqual:@1]);
 }
 
-- (void)testKeyedInstancesType
-{
-    SimpleModel *entity1 = [SimpleModel instanceWithPrimaryKey:@"w"];
-    entity1.name = @"Waudru";
-    [entity1 save];
-    
-    id result = nil;
-    
-    result = [SimpleModel keyedAllInstances];
-    XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
-    
-    [SimpleModel inDatabaseSync:^(FMDatabase *db) {
-        FMResultSet *r = [db executeQuery:@"SELECT * FROM SimpleModel"];
-        id result = [SimpleModel keyedInstancesFromResultSet:r];
-        XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
-        [r close];
-    }];
-    
-    result = [SimpleModel keyedInstancesWhere:@"name = 'Waudru'" arguments:nil];
-    XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
-    
-    result = [SimpleModel keyedInstancesWithPrimaryKeyValues:@[@"w"]];
-    XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
-}
-
 - (void)testVariableLimit {
     __block int maxParameterCount = 0;
     [FCModel inDatabaseSync:^(FMDatabase *db) {
@@ -235,7 +210,7 @@
     XCTAssert(anyChgNotificationsClass1  == 2, @"[4] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
     XCTAssert(anyChgNotificationsClass2  == 2, @"[4] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
 
-    [SimplerModel executeUpdateQuery:@"UPDATE $T SET title = 'executeUpdate2'" arguments:nil];
+    [SimplerModel executeUpdateQuery:@"UPDATE $T SET title = 'executeUpdate2'"];
 
     XCTAssert(anyChgNotificationsNoClass == 5, @"[5] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
     XCTAssert(anyChgNotificationsClass1  == 2, @"[5] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
@@ -291,7 +266,7 @@
         XCTAssert(anyChgNotificationsClass1  == 0, @"[4] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
         XCTAssert(anyChgNotificationsClass2  == 0, @"[4] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
 
-        [SimplerModel executeUpdateQuery:@"UPDATE $T SET title = 'executeUpdate2'" arguments:nil];
+        [SimplerModel executeUpdateQuery:@"UPDATE $T SET title = 'executeUpdate2'"];
 
         XCTAssert(anyChgNotificationsNoClass == 0, @"[5] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
         XCTAssert(anyChgNotificationsClass1  == 0, @"[5] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
@@ -369,7 +344,7 @@
         notifications++;
     }];
     
-    [SimplerModel executeUpdateQuery:@"INSERT INTO $T (id, title) VALUES (1, 'T')" arguments:nil];
+    [SimplerModel executeUpdateQuery:@"INSERT INTO $T (id, title) VALUES (1, 'T')"];
 
     XCTAssert(notifications == 1, @"Update without loaded instances got %d notifications", notifications);
     [NSNotificationCenter.defaultCenter removeObserver:observer];
