@@ -59,6 +59,7 @@ extern NSString * const FCModelChangedFieldsKey;
 //
 + (void)executeUpdateQuery:(NSString *)query, ...;
 + (void)executeUpdateQuery:(NSString *)query arguments:(NSArray *)args;
++ (void)executeUpdateQuery:(NSString *)query VAList:(va_list)va_args;
 
 // CRUD basics
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue; // will create if nonexistent
@@ -73,22 +74,30 @@ extern NSString * const FCModelChangedFieldsKey;
 //      $T  - This model's table name
 //      $PK - This model's primary-key field name
 //
-// The variadic (...) and non-variadic equivalents otherwise behave identically. "arguments" arrays can be nil.
-//
+// The variadic, va_list, and array equivalents otherwise behave identically. "arguments" arrays/va_lists can be nil/NULL.
+
 + (NSArray *)allInstances;
+
 + (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE, ...;
 + (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
++ (instancetype)firstInstanceWhere:(NSString *)query VAList:(va_list)va_args;
+
 + (NSArray *)instancesWhere:(NSString *)queryAfterWHERE, ...;
 + (NSArray *)instancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)array;
++ (NSArray *)instancesWhere:(NSString *)query VAList:(va_list)va_args;
 
 + (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY, ...;
 + (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
++ (instancetype)firstInstanceOrderedBy:(NSString *)query VAList:(va_list)va_args;
+
 + (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY, ...;
 + (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
++ (NSArray *)instancesOrderedBy:(NSString *)query VAList:(va_list)va_args;
 
 + (NSUInteger)numberOfInstances;
 + (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE, ...;
 + (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
++ (NSUInteger)numberOfInstancesWhere:(NSString *)query VAList:(va_list)va_args;
 
 // Fetch a set of primary keys, i.e. "WHERE key IN (...)"
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
@@ -96,10 +105,15 @@ extern NSString * const FCModelChangedFieldsKey;
 // Return data instead of completed objects (convenient accessors to FCModel's database queue with $T/$PK parsing)
 + (NSArray *)resultDictionariesFromQuery:(NSString *)query, ...;
 + (NSArray *)resultDictionariesFromQuery:(NSString *)query arguments:(NSArray *)arguments;
++ (NSArray *)resultDictionariesFromQuery:(NSString *)query VAList:(va_list)va_args;
+
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...;
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query arguments:(NSArray *)arguments;
++ (NSArray *)firstColumnArrayFromQuery:(NSString *)query VAList:(va_list)va_args;
+
 + (id)firstValueFromQuery:(NSString *)query, ...;
 + (id)firstValueFromQuery:(NSString *)query arguments:(NSArray *)arguments;
++ (id)firstValueFromQuery:(NSString *)query VAList:(va_list)va_args;
 
 // These methods use a global query cache (in FCModelCachedObject). Results are cached indefinitely until their
 //  table has any writes or there's a system low-memory warning, at which point they automatically invalidate.

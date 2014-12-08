@@ -229,6 +229,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     }
 }
 + (void)executeUpdateQuery:(NSString *)query arguments:(NSArray *)args { [self _executeUpdateQuery:query withVAList:NULL arguments:args]; }
++ (void)executeUpdateQuery:(NSString *)query VAList:(va_list)va_args { [self _executeUpdateQuery:query withVAList:va_args arguments:nil]; }
 + (void)executeUpdateQuery:(NSString *)query, ... { va_list args; va_start(args, query); [self _executeUpdateQuery:query withVAList:args arguments:nil]; va_end(args); }
 
 + (id)_instancesWhere:(NSString *)query argsArray:(NSArray *)argsArray orVAList:(va_list)va_args onlyFirst:(BOOL)onlyFirst
@@ -256,9 +257,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 }
 
 + (NSArray *)allInstances { return [self _instancesWhere:nil argsArray:nil orVAList:NULL onlyFirst:NO]; }
-+ (instancetype)firstInstanceWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orVAList:NULL onlyFirst:YES]; }
-+ (NSArray *)instancesWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orVAList:NULL onlyFirst:NO]; }
 
++ (instancetype)firstInstanceWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orVAList:NULL onlyFirst:YES]; }
++ (instancetype)firstInstanceWhere:(NSString *)query VAList:(va_list)va_args { return [self _instancesWhere:query argsArray:nil orVAList:va_args onlyFirst:YES]; }
 + (instancetype)firstInstanceWhere:(NSString *)query, ...
 {
     va_list args;
@@ -268,6 +269,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return instance;
 }
 
++ (NSArray *)instancesWhere:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:query argsArray:args orVAList:NULL onlyFirst:NO]; }
++ (NSArray *)instancesWhere:(NSString *)query VAList:(va_list)va_args { return [self _instancesWhere:query argsArray:nil orVAList:va_args onlyFirst:NO]; }
 + (NSArray *)instancesWhere:(NSString *)query, ...
 {
     va_list args;
@@ -285,11 +288,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     va_end(args);
     return instance;
 }
-
-+ (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)args
-{
-    return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:queryAfterORDERBY] argsArray:args orVAList:NULL onlyFirst:YES];
-}
++ (instancetype)firstInstanceOrderedBy:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] argsArray:args orVAList:NULL onlyFirst:YES]; }
++ (instancetype)firstInstanceOrderedBy:(NSString *)query VAList:(va_list)va_args { return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] argsArray:nil orVAList:va_args onlyFirst:YES]; }
 
 + (NSArray *)instancesOrderedBy:(NSString *)query, ...
 {
@@ -300,10 +300,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return instances;
 }
 
-+ (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)args
-{
-    return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:queryAfterORDERBY] argsArray:args orVAList:NULL onlyFirst:NO];
-}
++ (NSArray *)instancesOrderedBy:(NSString *)query arguments:(NSArray *)args { return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] argsArray:args orVAList:NULL onlyFirst:NO]; }
++ (NSArray *)instancesOrderedBy:(NSString *)query VAList:(va_list)va_args { return [self _instancesWhere:[@"1 ORDER BY " stringByAppendingString:query] argsArray:nil orVAList:va_args onlyFirst:NO]; }
 
 + (NSUInteger)_numberOfInstancesWhere:(NSString *)queryAfterWHERE withVAList:(va_list)va_args arguments:(NSArray *)args
 {
@@ -323,6 +321,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return count;
 }
 + (NSUInteger)numberOfInstancesWhere:(NSString *)query arguments:(NSArray *)args { return [self _numberOfInstancesWhere:query withVAList:NULL arguments:args]; };
++ (NSUInteger)numberOfInstancesWhere:(NSString *)query VAList:(va_list)va_args { return [self _numberOfInstancesWhere:query withVAList:va_args arguments:NULL]; };
 + (NSUInteger)numberOfInstancesWhere:(NSString *)query, ... { va_list args; va_start(args, query); NSUInteger c = [self _numberOfInstancesWhere:query withVAList:args arguments:nil]; va_end(args); return c; }
 + (NSUInteger)numberOfInstances { return [self _numberOfInstancesWhere:nil withVAList:NULL arguments:nil]; }
 
@@ -340,6 +339,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return columnArray;
 }
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query arguments:(NSArray *)arguments { return [self _firstColumnArrayFromQuery:query withVAList:NULL arguments:arguments]; }
++ (NSArray *)firstColumnArrayFromQuery:(NSString *)query VAList:(va_list)va_args { return [self _firstColumnArrayFromQuery:query withVAList:va_args arguments:nil]; }
 + (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ... { va_list args; va_start(args, query); NSArray *r = [self _firstColumnArrayFromQuery:query withVAList:args arguments:nil]; va_end(args); return r; }
 
 + (NSArray *)_resultDictionariesFromQuery:(NSString *)query withVAList:(va_list)va_args arguments:(NSArray *)arguments
@@ -356,6 +356,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return rows;
 }
 + (NSArray *)resultDictionariesFromQuery:(NSString *)query arguments:(NSArray *)arguments { return [self _resultDictionariesFromQuery:query withVAList:NULL arguments:arguments]; }
++ (NSArray *)resultDictionariesFromQuery:(NSString *)query VAList:(va_list)va_args { return [self _resultDictionariesFromQuery:query withVAList:va_args arguments:nil]; }
 + (NSArray *)resultDictionariesFromQuery:(NSString *)query, ... { va_list args; va_start(args, query); NSArray *r = [self _resultDictionariesFromQuery:query withVAList:args arguments:nil]; va_end(args); return r; }
 
 + (id)_firstValueFromQuery:(NSString *)query withVAList:(va_list)va_args arguments:(NSArray *)arguments
@@ -372,6 +373,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return firstValue;
 }
 + (id)firstValueFromQuery:(NSString *)query arguments:(NSArray *)arguments { return [self _firstValueFromQuery:query withVAList:NULL arguments:arguments]; }
++ (id)firstValueFromQuery:(NSString *)query VAList:(va_list)va_args { return [self _firstValueFromQuery:query withVAList:va_args arguments:nil]; }
 + (id)firstValueFromQuery:(NSString *)query, ... { va_list args; va_start(args, query); id r = [self _firstValueFromQuery:query withVAList:args arguments:nil]; va_end(args); return r; }
 
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
@@ -409,14 +411,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     fetchChunk();
     
     return allFoundInstances;
-}
-
-+ (NSDictionary *)keyedInstancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
-{
-    NSArray *instances = [self instancesWithPrimaryKeyValues:primaryKeyValues];
-    NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:instances.count];
-    for (FCModel *instance in instances) [dictionary setObject:instance forKey:instance.primaryKey];
-    return dictionary;
 }
 
 + (void)queryFailedInDatabase:(FMDatabase *)db
