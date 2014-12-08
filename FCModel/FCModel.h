@@ -84,20 +84,20 @@ extern NSString * const FCModelChangedFieldsKey;
 
 + (NSArray *)instancesWhere:(NSString *)queryAfterWHERE, ...;
 + (NSArray *)instancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)array;
-+ (NSArray *)instancesWhere:(NSString *)query VAList:(va_list)va_args;
++ (NSArray *)instancesWhere:(NSString *)queryAfterWHERE VAList:(va_list)va_args;
 
 + (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY, ...;
 + (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
-+ (instancetype)firstInstanceOrderedBy:(NSString *)query VAList:(va_list)va_args;
++ (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY VAList:(va_list)va_args;
 
 + (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY, ...;
 + (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
-+ (NSArray *)instancesOrderedBy:(NSString *)query VAList:(va_list)va_args;
++ (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY VAList:(va_list)va_args;
 
 + (NSUInteger)numberOfInstances;
 + (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE, ...;
 + (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
-+ (NSUInteger)numberOfInstancesWhere:(NSString *)query VAList:(va_list)va_args;
++ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE VAList:(va_list)va_args;
 
 // Fetch a set of primary keys, i.e. "WHERE key IN (...)"
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
