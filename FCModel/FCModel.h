@@ -134,19 +134,6 @@ extern NSString * const FCModelChangedFieldsKey;
 //
 + (id)primaryKeyValueForNewInstance;
 
-// Subclasses can customize how properties are serialized for the database.
-//
-// FCModel automatically handles numeric primitives, NSString, NSNumber, NSData, NSURL, NSDate, NSDictionary, and NSArray.
-// (Note that NSDate is stored as a time_t, so values before 1970 won't serialize properly.)
-//
-// To override this behavior or customize it for other types, you can implement these methods.
-// You MUST call the super implementation for values that you're not handling.
-//
-// Database values may be NSString or NSNumber for INTEGER/FLOAT/TEXT columns, or NSData for BLOB columns.
-//
-- (id)serializedDatabaseRepresentationOfValue:(id)instanceValue forPropertyNamed:(NSString *)propertyName;
-- (id)unserializedRepresentationOfDatabaseValue:(id)databaseValue forPropertyNamed:(NSString *)propertyName;
-
 // Transactions:
 //  - Cannot be nested
 //  - Enqueue and coalesce change notifications until commit (and are discarded if the transaction is rolled back)

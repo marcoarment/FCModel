@@ -118,65 +118,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 #pragma mark - Mapping properties to database fields
 
-- (id)serializedDatabaseRepresentationOfValue:(id)instanceValue forPropertyNamed:(NSString *)propertyName
-{
-    if ([instanceValue isKindOfClass:NSArray.class] || [instanceValue isKindOfClass:NSDictionary.class]) {
-        NSError *error = nil;
-        NSData *bplist = [NSPropertyListSerialization dataWithPropertyList:instanceValue format:NSPropertyListBinaryFormat_v1_0 options:NSPropertyListImmutable error:&error];
-        if (error) {
-            [[NSException exceptionWithName:FCModelException reason:[NSString stringWithFormat:
-                @"Cannot serialize %@ to plist for %@.%@: %@", NSStringFromClass(((NSObject *)instanceValue).class), NSStringFromClass(self.class), propertyName, error.localizedDescription
-            ] userInfo:nil] raise];
-        }
-        return bplist;
-    } else if ([instanceValue isKindOfClass:NSURL.class]) {
-        return [(NSURL *)instanceValue absoluteString];
-    } else if ([instanceValue isKindOfClass:NSDate.class]) {
-        return [NSNumber numberWithDouble:[(NSDate *)instanceValue timeIntervalSince1970]];
-    }
-
-    return instanceValue;
-}
-
-- (id)encodedValueForFieldName:(NSString *)fieldName
-{
-    id value = [self serializedDatabaseRepresentationOfValue:[self valueForKey:fieldName] forPropertyNamed:fieldName];
-    return value ?: NSNull.null;
-}
-
-- (id)unserializedRepresentationOfDatabaseValue:(id)databaseValue forPropertyNamed:(NSString *)propertyName
-{
-    Class propertyClass = [g_fieldInfo[self.class][propertyName] propertyClass];
-    
-    if (propertyClass && databaseValue) {
-        if (propertyClass == NSURL.class) {
-            return [databaseValue isKindOfClass:NSURL.class] ? databaseValue : [NSURL URLWithString:databaseValue];
-        } else if (propertyClass == NSDate.class) {
-            return [databaseValue isKindOfClass:NSDate.class] ? databaseValue : [NSDate dateWithTimeIntervalSince1970:[databaseValue doubleValue]];
-        } else if (propertyClass == NSDictionary.class) {
-            if ([databaseValue isKindOfClass:NSDictionary.class]) return databaseValue;
-            NSDictionary *dict = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
-            return dict && [dict isKindOfClass:NSDictionary.class] ? dict : @{};
-        } else if (propertyClass == NSArray.class) {
-            if ([databaseValue isKindOfClass:NSArray.class]) return databaseValue;
-            NSArray *array = [NSPropertyListSerialization propertyListWithData:databaseValue options:kCFPropertyListImmutable format:NULL error:NULL];
-            return array && [array isKindOfClass:NSArray.class] ? array : @[];
-        } else if (propertyClass == NSDecimalNumber.class) {
-            return [databaseValue isKindOfClass:NSDecimalNumber.class] ? databaseValue : [NSDecimalNumber decimalNumberWithDecimal:[databaseValue decimalValue]];
-        }
-    }
-
-    return databaseValue;
-}
-
-- (void)decodeFieldValue:(id)value intoPropertyName:(NSString *)propertyName
-{
-    if (value == NSNull.null) value = nil;
-    if (class_getProperty(self.class, propertyName.UTF8String)) {
-        [self setValue:[self unserializedRepresentationOfDatabaseValue:value forPropertyNamed:propertyName] forKeyPath:propertyName];
-    }
-}
-
 + (NSArray *)databaseFieldNames     { return checkForOpenDatabaseFatal(NO) ? [g_fieldInfo[self] allKeys] : nil; }
 + (NSString *)primaryKeyFieldName   { return checkForOpenDatabaseFatal(NO) ? g_primaryKeyFieldName[self] : nil; }
 + (FCModelFieldInfo *)infoForFieldName:(NSString *)fieldName { return checkForOpenDatabaseFatal(NO) ? g_fieldInfo[self][fieldName] : nil; }
@@ -447,7 +388,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             
             id suppliedValue = fieldValues[key];
             if (suppliedValue) {
-                [self decodeFieldValue:suppliedValue intoPropertyName:key];
+                [self setValue:(suppliedValue == NSNull.null ? nil : suppliedValue) forKey:key];
             } else {
                 if ([key isEqualToString:g_primaryKeyFieldName[self.class]]) {
                     NSAssert(! existsInDB, @"Primary key not provided to initWithFieldValues:existsInDatabaseAlready:YES");
@@ -466,7 +407,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                     } while (conflict);
                     
                 } else if (info.defaultValue) {
-                    [self decodeFieldValue:info.defaultValue intoPropertyName:key];
+                    [self setValue:(info.defaultValue == NSNull.null ? nil : info.defaultValue) forKey:key];
                 }
             }
         }];
@@ -501,7 +442,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 - (void)revertUnsavedChangeToFieldName:(NSString *)fieldName
 {
     id oldValue = self._rowValuesInDatabase ? self._rowValuesInDatabase[fieldName] : nil;
-    if (oldValue) [self decodeFieldValue:oldValue intoPropertyName:fieldName];
+    [self setValue:(oldValue == NSNull.null ? nil : oldValue) forKey:fieldName];
 }
 
 - (BOOL)hasUnsavedChanges { return _inDatabaseStatus == FCModelInDatabaseStatusNotYetInserted || self.unsavedChanges.count; }
@@ -515,19 +456,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
         NSDictionary *rowValuesInDatabase = self._rowValuesInDatabase;
         id oldValue = rowValuesInDatabase && [rowValuesInDatabase isKindOfClass:NSDictionary.class] ? rowValuesInDatabase[fieldName] : nil;
-        if (oldValue) oldValue = [self unserializedRepresentationOfDatabaseValue:(oldValue == NSNull.null ? nil : oldValue) forPropertyNamed:fieldName];
+        oldValue = (oldValue == NSNull.null ? nil : oldValue);
         
         id newValue = [self valueForKey:fieldName];
         if ((oldValue || newValue) && (! oldValue || (oldValue && ! newValue) || (oldValue && newValue && ! [newValue isEqual:oldValue]))) {
-            BOOL valueChanged = YES;
-            if (oldValue && newValue && [oldValue isKindOfClass:[NSDate class]] && [newValue isKindOfClass:[NSDate class]]) {
-                // to avoid rounding errors, dates are flagged as changed only if the difference is significant enough (well below one second)
-                valueChanged = fabs([oldValue timeIntervalSinceDate:newValue]) > 0.000001;
-            }
-            
-            if (valueChanged) {
-                changes[fieldName] = newValue ?: NSNull.null;
-            }
+            changes[fieldName] = newValue ?: NSNull.null;
         }
     }];
 
@@ -555,7 +488,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         
         NSString *tableName = NSStringFromClass(self.class);
         NSString *pkName = g_primaryKeyFieldName[self.class];
-        id primaryKey = [self encodedValueForFieldName:pkName];
+        id primaryKey = self.primaryKey;
+        if (primaryKey == NSNull.null) primaryKey = nil;
         NSAssert1(primaryKey, @"Cannot update %@ without primary key value", NSStringFromClass(self.class));
        
         if (update) {
@@ -580,7 +514,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
         values = [NSMutableArray arrayWithCapacity:columnNames.count];
         [columnNames enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            [values addObject:[self encodedValueForFieldName:obj]];
+            [values addObject:([self valueForKey:obj] ?: NSNull.null)];
         }];
         [values addObject:primaryKey];
 
@@ -619,7 +553,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         NSDictionary *rowValuesInDatabase = self._rowValuesInDatabase;
         NSMutableDictionary *newRowValues = rowValuesInDatabase ? [rowValuesInDatabase mutableCopy] : [NSMutableDictionary dictionary];
         [changes enumerateKeysAndObjectsUsingBlock:^(NSString *fieldName, id obj, BOOL *stop) {
-            obj = [self serializedDatabaseRepresentationOfValue:(obj == NSNull.null ? nil : obj) forPropertyNamed:fieldName];
             newRowValues[fieldName] = obj ?: NSNull.null;
         }];
         self._rowValuesInDatabase = newRowValues;
