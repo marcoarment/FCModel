@@ -318,7 +318,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block NSUInteger count = 0;
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
         NSString *expandedQuery = [self expandQuery:(queryAfterWHERE ? [@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE] : @"SELECT COUNT(*) FROM $T")];
-        FMResultSet *s = va_args ? [db executeQuery:expandedQuery withArgumentsInArray:args] : [db executeQuery:expandedQuery withArgumentsInArray:args];
+        FMResultSet *s = va_args ? [db executeQuery:expandedQuery withVAList:va_args] : [db executeQuery:expandedQuery withArgumentsInArray:args];
         if (! s) [self queryFailedInDatabase:db];
         if ([s next]) {
             NSNumber *value = [s objectForColumnIndex:0];
