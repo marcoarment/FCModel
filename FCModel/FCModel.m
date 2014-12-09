@@ -9,6 +9,7 @@
 #import <string.h>
 #import "FCModel.h"
 #import "FCModelCachedObject.h"
+#import "FCModelInstanceCache.h"
 #import "FCModelDatabaseQueue.h"
 #import "FMDatabase.h"
 #import "FMDatabaseAdditions.h"
@@ -26,6 +27,7 @@ static FCModelDatabaseQueue *g_databaseQueue = NULL;
 static NSDictionary *g_fieldInfo = NULL;
 static NSDictionary *g_ignoredFieldNames = NULL;
 static NSDictionary *g_primaryKeyFieldName = NULL;
+static FCModelInstanceCache *g_instanceCache = NULL;
 
 typedef NS_ENUM(char, FCModelInDatabaseStatus) {
     FCModelInDatabaseStatusNotYetInserted = 0,
@@ -93,12 +95,16 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     if (! primaryKeyValue || primaryKeyValue == NSNull.null) return (create ? [self new] : nil);
     
     FCModel *instance = instance = fieldValues ? [[self alloc] initWithFieldValues:fieldValues existsInDatabaseAlready:YES] : [self instanceFromDatabaseWithPrimaryKey:primaryKeyValue];
+    if (instance) [g_instanceCache saveInstance:instance];
     if (! instance && create) instance = [[self alloc] initWithFieldValues:@{ g_primaryKeyFieldName[self] : primaryKeyValue } existsInDatabaseAlready:NO];
     return instance;
 }
 
 + (instancetype)instanceFromDatabaseWithPrimaryKey:(id)key
 {
+    id existing = [g_instanceCache instanceOfClass:self withPrimaryKeyValue:key];
+    if (existing) return [existing copy];
+
     __block FCModel *model = NULL;
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
         FMResultSet *s = [db executeQuery:[self expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], key];
@@ -223,6 +229,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         onMainThreadAsync(^{
             [changedFieldsToNotify enumerateKeysAndObjectsUsingBlock:^(Class class, NSDictionary *changedFields, BOOL *stop) {
                 [NSNotificationCenter.defaultCenter postNotificationName:FCModelWillSendChangeNotification object:class userInfo:@{ FCModelChangedFieldsKey : changedFields }];
+            }];
+            [changedFieldsToNotify enumerateKeysAndObjectsUsingBlock:^(Class class, NSDictionary *changedFields, BOOL *stop) {
                 [NSNotificationCenter.defaultCenter postNotificationName:FCModelChangeNotification object:class userInfo:@{ FCModelChangedFieldsKey : changedFields }];
             }];
         });
@@ -478,6 +486,19 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return self;
 }
 
+- (instancetype)copyWithZone:(NSZone *)zone
+{
+    if (_inDatabaseStatus != FCModelInDatabaseStatusRowExists) [[NSException exceptionWithName:FCModelException reason:@"Only FCModel instances written to the database can be copied" userInfo:nil] raise];
+
+    NSMutableDictionary *fieldValues = [NSMutableDictionary dictionary];
+    [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(NSString *fieldName, id fieldInfo, BOOL *stop) {
+        id value = [self valueForKey:fieldName];
+        if (value) fieldValues[fieldName] = value;
+    }];
+    
+    return [[self.class alloc] initWithFieldValues:fieldValues existsInDatabaseAlready:YES];
+}
+
 - (void)revertUnsavedChanges
 {
     if (! self._rowValuesInDatabase) return;
@@ -615,7 +636,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
         hadChanges = YES;
     }];
-
+    
+    [g_instanceCache saveInstance:self];
     if (hadChanges) [self.class postChangeNotificationWithChangedFields:changedFields];
     return hadChanges;
 }
@@ -623,9 +645,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 - (void)delete
 {
     checkForOpenDatabaseFatal(YES);
-
+    __block id pkValue = nil;
+    
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
         if (_inDatabaseStatus == FCModelInDatabaseStatusDeleted) return;
+        pkValue = self.primaryKey;
         
         __block BOOL success = NO;
         NSString *query = [self.class expandQuery:@"DELETE FROM \"$T\" WHERE \"$PK\" = ?"];
@@ -637,6 +661,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         _inDatabaseStatus = FCModelInDatabaseStatusDeleted;
     }];
 
+    [g_instanceCache removeInstanceOfClass:self.class withPrimaryKeyValue:pkValue];
     [self.class postChangeNotificationWithChangedFields:nil];
 }
 
@@ -668,7 +693,16 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 - (NSUInteger)hash
 {
-    return ((NSObject *)self.primaryKey).hash;
+    return NSStringFromClass(self.class).hash ^ ((NSObject *)self.primaryKey).hash;
+}
+
+- (BOOL)isEqual:(id)object
+{
+    if (self == object) return YES;
+    if (self.class != [object class]) return NO;
+    id selfKey = self.primaryKey;
+    id objectKey = [object primaryKey];
+    return selfKey && objectKey && [selfKey isEqual:objectKey];
 }
 
 #pragma mark - Database management
@@ -832,6 +866,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     }];
 
     [g_databaseQueue startMonitoringForExternalChanges];
+    g_instanceCache = [[FCModelInstanceCache alloc] init];
 }
 
 + (void)closeDatabase
@@ -843,6 +878,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     }
     
     [FCModelCachedObject clearCache];
+    [g_instanceCache removeAllInstances];
     g_primaryKeyFieldName = nil;
     g_fieldInfo = nil;
     g_ignoredFieldNames = nil;
@@ -857,6 +893,13 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 }
 
 #pragma mark - Batch notification queuing
+
++ (BOOL)isInTransaction
+{
+    __block BOOL inTransaction = NO;
+    [self inDatabaseSync:^(FMDatabase *db) { inTransaction = db.inTransaction; }];
+    return inTransaction;
+}
 
 + (void)performTransaction:(BOOL (^)())block
 {
@@ -880,6 +923,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     onMainThreadAsync(^{
         [changedFieldsToNotify enumerateKeysAndObjectsUsingBlock:^(Class class, NSDictionary *changedFields, BOOL *stop) {
             [NSNotificationCenter.defaultCenter postNotificationName:FCModelWillSendChangeNotification object:class userInfo:@{ FCModelChangedFieldsKey : changedFields }];
+        }];
+        [changedFieldsToNotify enumerateKeysAndObjectsUsingBlock:^(Class class, NSDictionary *changedFields, BOOL *stop) {
             [NSNotificationCenter.defaultCenter postNotificationName:FCModelChangeNotification object:class userInfo:@{ FCModelChangedFieldsKey : changedFields }];
         }];
     });

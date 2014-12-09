@@ -136,14 +136,7 @@ extern NSString * const FCModelWillSendChangeNotification;
     return obj;
 }
 
-- (void)dealloc
-{
-    [NSNotificationCenter.defaultCenter removeObserver:self name:FCModelWillSendChangeNotification object:_modelClass];
-
-#if TARGET_OS_IPHONE
-    [NSNotificationCenter.defaultCenter removeObserver:self name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
-#endif
-}
+- (void)dealloc { [NSNotificationCenter.defaultCenter removeObserver:self]; }
 
 - (void)dataSourceChanged:(NSNotification *)n
 {

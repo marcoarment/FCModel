@@ -27,7 +27,7 @@
     
     [FCModel openDatabaseAtPath:dbPath withDatabaseInitializer:NULL schemaBuilder:^(FMDatabase *db, int *schemaVersion) {
         [db setCrashOnErrors:YES];
-        db.traceExecution = YES; // Log every query (useful to learn what FCModel is doing or analyze performance)
+//        db.traceExecution = YES; // Log every query (useful to learn what FCModel is doing or analyze performance)
         [db beginTransaction];
         
         void (^failedAt)(int statement) = ^(int statement){

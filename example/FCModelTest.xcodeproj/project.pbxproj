@@ -18,6 +18,7 @@
 		A924EA3218D0EC94000C28BD /* FCModelDatabaseQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = A924EA3018D0EC94000C28BD /* FCModelDatabaseQueue.m */; };
 		A92A8E3F19189026000A9B46 /* SimplerModel.m in Sources */ = {isa = PBXBuildFile; fileRef = A92A8E3E19189026000A9B46 /* SimplerModel.m */; };
 		A99B9B2218B316DC00D79C6A /* FMDatabaseAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = A99B9B2118B316DC00D79C6A /* FMDatabaseAdditions.m */; };
+		A9B741F91A36480600CF42CE /* FCModelInstanceCache.m in Sources */ = {isa = PBXBuildFile; fileRef = A9B741F81A36480600CF42CE /* FCModelInstanceCache.m */; };
 		A9EEFAC317E4C8EE0066C5EA /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC217E4C8EE0066C5EA /* Foundation.framework */; };
 		A9EEFAC517E4C8EE0066C5EA /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC417E4C8EE0066C5EA /* CoreGraphics.framework */; };
 		A9EEFAC717E4C8EE0066C5EA /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC617E4C8EE0066C5EA /* UIKit.framework */; };
@@ -68,6 +69,8 @@
 		A92A8E3E19189026000A9B46 /* SimplerModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SimplerModel.m; sourceTree = "<group>"; };
 		A99B9B2018B316DC00D79C6A /* FMDatabaseAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FMDatabaseAdditions.h; sourceTree = "<group>"; };
 		A99B9B2118B316DC00D79C6A /* FMDatabaseAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FMDatabaseAdditions.m; sourceTree = "<group>"; };
+		A9B741F71A36480600CF42CE /* FCModelInstanceCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelInstanceCache.h; sourceTree = "<group>"; };
+		A9B741F81A36480600CF42CE /* FCModelInstanceCache.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelInstanceCache.m; sourceTree = "<group>"; };
 		A9EEFABF17E4C8EE0066C5EA /* FCModelTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FCModelTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A9EEFAC217E4C8EE0066C5EA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		A9EEFAC417E4C8EE0066C5EA /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -225,6 +228,8 @@
 			children = (
 				A9EEFAFB17E4CB300066C5EA /* FCModel.h */,
 				A9EEFAFC17E4CB300066C5EA /* FCModel.m */,
+				A9B741F71A36480600CF42CE /* FCModelInstanceCache.h */,
+				A9B741F81A36480600CF42CE /* FCModelInstanceCache.m */,
 				A924EA2D18D0EC94000C28BD /* FCModelCachedObject.h */,
 				A924EA2E18D0EC94000C28BD /* FCModelCachedObject.m */,
 				A924EA2F18D0EC94000C28BD /* FCModelDatabaseQueue.h */,
@@ -374,6 +379,7 @@
 				A9EEFB2C17E6BCF80066C5EA /* FMDatabasePool.m in Sources */,
 				A9EEFB2117E4E39A0066C5EA /* RandomThings.m in Sources */,
 				A924EA3118D0EC94000C28BD /* FCModelCachedObject.m in Sources */,
+				A9B741F91A36480600CF42CE /* FCModelInstanceCache.m in Sources */,
 				A924EA3218D0EC94000C28BD /* FCModelDatabaseQueue.m in Sources */,
 				A9EEFADC17E4C8EE0066C5EA /* ViewController.m in Sources */,
 				A9EEFAD317E4C8EE0066C5EA /* AppDelegate.m in Sources */,
@@ -539,10 +545,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "FCModelTest/FCModelTest-Prefix.pch";
 				INFOPLIST_FILE = "FCModelTest/FCModelTest-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -552,9 +561,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "FCModelTest/FCModelTest-Prefix.pch";
 				INFOPLIST_FILE = "FCModelTest/FCModelTest-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};

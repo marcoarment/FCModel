@@ -37,7 +37,7 @@ extern NSString * const FCModelInstanceKey;
 extern NSString * const FCModelChangedFieldsKey;
 
 
-@interface FCModel : NSObject
+@interface FCModel : NSObject <NSCopying>
 
 @property (readonly) id primaryKey;
 @property (readonly) NSDictionary *allFields;
@@ -162,6 +162,7 @@ extern NSString * const FCModelChangedFieldsKey;
 //  - Do not automatically "revert" changed model instances in memory after rolled-back value changes
 //
 + (void)performTransaction:(BOOL (^)())block; // return YES to commit, NO to roll back
++ (BOOL)isInTransaction;
 
 // Field info: You probably won't need this most of the time, but it's nice to have sometimes. FCModel's generating this privately
 //  anyway, so you might as well have read-only access to it if it can help you avoid some code. (I've already needed it.)
