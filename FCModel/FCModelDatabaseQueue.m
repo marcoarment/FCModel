@@ -104,9 +104,11 @@
 
         // Read change counter from SQLite file header to detect changes made by other processes during this write
         uint32_t changeCounterBeforeBlock = 0;
-        lseek(changeCounterReadFileDescriptor, kSQLiteFileChangeCounterOffset, SEEK_SET);
-        read(changeCounterReadFileDescriptor, &changeCounterBeforeBlock, sizeof(uint32_t));
-        changeCounterBeforeBlock = CFSwapInt32BigToHost(changeCounterBeforeBlock);
+        if (changeCounterReadFileDescriptor > 0) {
+            lseek(changeCounterReadFileDescriptor, kSQLiteFileChangeCounterOffset, SEEK_SET);
+            read(changeCounterReadFileDescriptor, &changeCounterBeforeBlock, sizeof(uint32_t));
+            changeCounterBeforeBlock = CFSwapInt32BigToHost(changeCounterBeforeBlock);
+        }
         
         block(db);
 
@@ -115,9 +117,11 @@
             
             // if more than 1 change during this expected write, either there's 2 queries in it (unexpected) or another process changed it
             uint32_t changeCounterAfterBlock = 0;
-            lseek(changeCounterReadFileDescriptor, kSQLiteFileChangeCounterOffset, SEEK_SET);
-            read(changeCounterReadFileDescriptor, &changeCounterAfterBlock, sizeof(uint32_t));
-            changeCounterAfterBlock = CFSwapInt32BigToHost(changeCounterAfterBlock);
+            if (changeCounterReadFileDescriptor > 0) {
+                lseek(changeCounterReadFileDescriptor, kSQLiteFileChangeCounterOffset, SEEK_SET);
+                read(changeCounterReadFileDescriptor, &changeCounterAfterBlock, sizeof(uint32_t));
+                changeCounterAfterBlock = CFSwapInt32BigToHost(changeCounterAfterBlock);
+            }
 
             if (changeCounterAfterBlock - changeCounterBeforeBlock > 1) [FCModel dataWasUpdatedExternally];
         });
