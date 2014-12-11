@@ -15,6 +15,7 @@
 
 @interface FCModelDatabaseQueue ()
 - (uint32_t)sqliteChangeCount;
+- (BOOL)sqliteChangeTrackingIsActive;
 @property (nonatomic) int32_t expectedChangeCount;
 @end
 
@@ -27,6 +28,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 
     // Can't notify synchronously since we need to ensure that no other database queries are executed before this function returns
     FCModelDatabaseQueue *queue = (__bridge FCModelDatabaseQueue *) context;
+    if (! queue.sqliteChangeTrackingIsActive) return;
     queue.expectedChangeCount = [queue sqliteChangeCount] + 1;
     if (queue.isInInternalWrite) return;
     
@@ -72,8 +74,12 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     return self.openDatabase;
 }
 
+- (BOOL)sqliteChangeTrackingIsActive { return changeCounterReadFileDescriptor > 0; }
+
 - (uint32_t)sqliteChangeCount
 {
+    if (! changeCounterReadFileDescriptor) return 0;
+    
     uint32_t changeCounter = 0;
     lseek(changeCounterReadFileDescriptor, kSQLiteFileChangeCounterOffset, SEEK_SET);
     read(changeCounterReadFileDescriptor, &changeCounter, sizeof(uint32_t));
@@ -118,10 +124,10 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 - (void)close
 {
     [self execOnSelfSync:^{
-        dispatch_source_cancel(dispatchFileWriteSource);
-        dispatchFileWriteSource = NULL;
         dispatchEventFileDescriptor = 0;
         changeCounterReadFileDescriptor = 0;
+        dispatch_source_cancel(dispatchFileWriteSource);
+        dispatchFileWriteSource = NULL;
 
         [self.openDatabase close];
         self.openDatabase = nil;
@@ -142,7 +148,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 
         block(db);
 
-        dispatch_sync(dispatchFileWriteQueue, ^{
+        if (changeCounterReadFileDescriptor) dispatch_sync(dispatchFileWriteQueue, ^{
             // if more than 1 change during this expected write, either there's 2 queries in it (unexpected) or another process changed it
             uint32_t changeCounterAfterBlock = [self sqliteChangeCount];
             if (changeCounterAfterBlock - changeCounterBeforeBlock > 1) [FCModel dataChangedExternally];
