@@ -70,6 +70,7 @@ typedef NS_ENUM(NSInteger, FCModelSaveResult) {
 + (void)openDatabaseAtPath:(NSString *)path withSchemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
 + (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
 
++ (sqlite3 *) sqliteHandle;
 + (NSArray *)databaseFieldNames;
 + (NSString *)primaryKeyFieldName;
 
