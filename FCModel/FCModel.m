@@ -91,6 +91,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 @implementation FCModel
 
++ (sqlite3 *)sqliteHandle { return [[g_databaseQueue database] sqliteHandle]; }
+
 - (NSError *)lastSQLiteError { return self._lastSQLiteError; }
 
 - (BOOL)isDeleted { return deleted; }
