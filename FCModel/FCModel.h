@@ -122,6 +122,11 @@ extern NSString * const FCModelChangedFieldsKey;
 
 + (NSSet *)ignoredFieldNames; // Fields that exist in the table but should not be read into the model. Default empty set, cannot be nil.
 
+// Notification shortcuts: call on an FCModel subclass to be notified for only changes to certain fields
++ (void)addObserver:(id)target selector:(SEL)action forChangedFields:(NSSet *)fieldNamesToWatch;
++ (void)addObserver:(id)target selector:(SEL)action forAnyChangedFieldsExcept:(NSSet *)fieldNamesToIgnore;
++ (void)removeObserverForFieldChanges:(id)target;
+
 // To create new records with supplied primary-key values, call instanceWithPrimaryKey:, then save when done
 //  setting other fields.
 //

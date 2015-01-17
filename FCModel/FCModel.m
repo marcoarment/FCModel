@@ -11,6 +11,7 @@
 #import "FCModelCachedObject.h"
 #import "FCModelInstanceCache.h"
 #import "FCModelDatabaseQueue.h"
+#import "FCModelNotificationCenter.h"
 #import "FMDatabase.h"
 #import "FMDatabaseAdditions.h"
 #import <sqlite3.h>
@@ -629,6 +630,23 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return selfKey && objectKey && [selfKey isEqual:objectKey];
 }
 
++ (void)addObserver:(id)target selector:(SEL)action forChangedFields:(NSSet *)fieldNamesToWatch
+{
+    if (self == FCModel.class) [[NSException exceptionWithName:NSInvalidArgumentException reason:@"Must call [FCModel addObserver:selector:forChangedFields:] on an FCModel subclass" userInfo:nil] raise];
+    [FCModelNotificationCenter.defaultCenter addObserver:target selector:action class:self changedFields:fieldNamesToWatch];
+}
+
++ (void)addObserver:(id)target selector:(SEL)action forAnyChangedFieldsExcept:(NSSet *)fieldNamesToIgnore
+{
+    if (self == FCModel.class) [[NSException exceptionWithName:NSInvalidArgumentException reason:@"Must call [FCModel addObserver:selector:forAnyChangedFieldsExcept:] on an FCModel subclass" userInfo:nil] raise];
+    NSMutableSet *fieldsToWatch = [NSSet setWithArray:self.databaseFieldNames].mutableCopy;
+    [fieldsToWatch minusSet:fieldNamesToIgnore];
+    [FCModelNotificationCenter.defaultCenter addObserver:target selector:action class:self changedFields:fieldsToWatch];
+}
+
++ (void)removeObserverForFieldChanges:(id)target { [FCModelNotificationCenter.defaultCenter removeFieldChangeObservers:target]; }
+
+
 #pragma mark - Database management
 
 + (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder
@@ -865,9 +883,10 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         else g_databaseQueue.enqueuedChangedFieldsByClass[class] = [changedFields mutableCopy];
     } else {
         // notify immediately
+        NSDictionary *userInfo = @{ FCModelChangedFieldsKey : changedFields };
         onMainThreadAsync(^{
-            [NSNotificationCenter.defaultCenter postNotificationName:FCModelWillSendChangeNotification object:self.class userInfo:@{ FCModelChangedFieldsKey : changedFields }];
-            [NSNotificationCenter.defaultCenter postNotificationName:FCModelChangeNotification object:self.class userInfo:@{ FCModelChangedFieldsKey : changedFields }];
+            [NSNotificationCenter.defaultCenter postNotificationName:FCModelWillSendChangeNotification object:self userInfo:userInfo];
+            [NSNotificationCenter.defaultCenter postNotificationName:FCModelChangeNotification object:self userInfo:userInfo];
         });
     }
 }
