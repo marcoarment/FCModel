@@ -8,6 +8,10 @@
 #import "FCModelCachedObject.h"
 #import "FCModel.h"
 
+#if TARGET_OS_IPHONE
+#import <UIKit/UIKit.h>
+#endif
+
 // FCModelCachedObject has its own notification that runs BEFORE the other FCModel change notifications
 //  so it can remove stale data before any application actions fetch new data in response to the change.
 extern NSString * const FCModelWillSendChangeNotification;

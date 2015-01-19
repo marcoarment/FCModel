@@ -7,6 +7,9 @@
 //
 
 #import "FCModelInstanceCache.h"
+#if TARGET_OS_IPHONE
+#import <UIKit/UIKit.h>
+#endif
 extern NSString * const FCModelWillSendChangeNotification;
 
 @interface FCModelInstanceCache ()
