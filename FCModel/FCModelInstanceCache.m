@@ -33,14 +33,14 @@ extern NSString * const FCModelWillSendChangeNotification;
 - (FCModel *)instanceOfClass:(Class)class withPrimaryKeyValue:(id)primaryKeyValue
 {
     if (! primaryKeyValue) return nil;
-    NSCache *classCache = self.cachesByClass[class];
+    NSMutableDictionary *classCache = self.cachesByClass[class];
     return classCache ? [classCache objectForKey:primaryKeyValue] : nil;
 }
 
 - (void)removeInstanceOfClass:(Class)class withPrimaryKeyValue:(id)primaryKeyValue
 {
     if (! primaryKeyValue) return;
-    NSCache *classCache = self.cachesByClass[class];
+    NSMutableDictionary *classCache = self.cachesByClass[class];
     if (classCache) [classCache removeObjectForKey:primaryKeyValue];
 }
 
@@ -49,9 +49,9 @@ extern NSString * const FCModelWillSendChangeNotification;
     id pkValue = instance.primaryKey;
     if (! pkValue) return;
     
-    NSCache *classCache = self.cachesByClass[instance.class];
+    NSMutableDictionary *classCache = self.cachesByClass[instance.class];
     if (! classCache) {
-        classCache = [[NSCache alloc] init];
+        classCache = [NSMutableDictionary dictionary];
         self.cachesByClass[(id)instance.class] = classCache;
     }
     [classCache setObject:[instance copy] forKey:pkValue];
