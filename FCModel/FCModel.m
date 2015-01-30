@@ -516,8 +516,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         NSString *tableName = NSStringFromClass(self.class);
         NSString *pkName = g_primaryKeyFieldName[self.class];
         id primaryKey = self.primaryKey;
-        if (primaryKey == NSNull.null) primaryKey = nil;
-        NSAssert1(primaryKey, @"Cannot update %@ without primary key value", NSStringFromClass(self.class));
+        NSAssert1(primaryKey && (primaryKey != NSNull.null), @"Cannot update %@ without primary key value", NSStringFromClass(self.class));
        
         if (update) {
             columnNames = [changes allKeys];
