@@ -117,6 +117,32 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return model;
 }
 
+- (BOOL)reload { return [self reloadAndSave:nil]; }
+- (BOOL)reloadAndSave:(void (^)())modificiationsBlock
+{
+    __block BOOL success = NO;
+    [g_databaseQueue inDatabase:^(FMDatabase *db) {
+        if (self.isDeleted) return;
+        FMResultSet *s = [db executeQuery:[self.class expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], self.primaryKey];
+        if (! s) [self.class queryFailedInDatabase:db];
+        if ([s next]) {
+            [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL *stop) {
+                id suppliedValue = s.resultDictionary[key];
+                if (suppliedValue) [self setValue:(suppliedValue == NSNull.null ? nil : suppliedValue) forKey:key];
+            }];
+
+            self._rowValuesInDatabase = s.resultDictionary;
+        }
+        [s close];
+        
+        if (modificiationsBlock) {
+            modificiationsBlock();
+            success = [self save];
+        }
+    }];
+    return success;
+}
+
 #pragma mark - Mapping properties to database fields
 
 + (NSArray *)databaseFieldNames     { return checkForOpenDatabaseFatal(NO) ? [g_fieldInfo[self] allKeys] : nil; }

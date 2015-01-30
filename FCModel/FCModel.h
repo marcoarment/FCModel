@@ -122,6 +122,21 @@ extern NSString * const FCModelChangedFieldsKey;
 
 + (NSSet *)ignoredFieldNames; // Fields that exist in the table but should not be read into the model. Default empty set, cannot be nil.
 
+// Safe-writing helpers:
+//  - reload: reloads the current database values into this instance, overwriting any unsaved changes
+//
+//  - reloadAndSave:modificiationsBlock: Performs a "safe save" intended to prevent race conditions between loading, modifying, and saving.
+//      Don't call -save within modificiationsBlock -- simply make your modifications on the instance you're working on, e.g.:
+//
+//      [person reloadAndSave:^{
+//          person.name = @"Susan";
+//      }];
+//
+//  Both return YES if the transaction succeeded. May return NO if, for instance, the instance gets deleted beforehand.
+//
+- (BOOL)reload;
+- (BOOL)reloadAndSave:(void (^)())modificiationsBlock;
+
 // Notification shortcuts: call on an FCModel subclass to be notified for only changes to certain fields
 + (void)addObserver:(id)target selector:(SEL)action forChangedFields:(NSSet *)fieldNamesToWatch;
 + (void)addObserver:(id)target selector:(SEL)action forAnyChangedFieldsExcept:(NSSet *)fieldNamesToIgnore;
