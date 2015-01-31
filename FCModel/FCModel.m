@@ -507,9 +507,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     
         NSDictionary *changes = self.unsavedChanges;
         BOOL dirty = changes.count;
-        if (! dirty && _inDatabaseStatus == FCModelInDatabaseStatusRowExists) { hadChanges = NO; return; }
+        if (! dirty && self.existsInDatabase) { hadChanges = NO; return; }
         
-        BOOL update = (_inDatabaseStatus == FCModelInDatabaseStatusRowExists);
+        BOOL update = self.existsInDatabase;
         NSArray *columnNames;
         NSMutableArray *values;
         
