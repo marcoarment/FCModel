@@ -116,7 +116,7 @@
     NSMutableSet *colorsUsedAlready = [NSMutableSet set];
     
     // Put some data in the table if there's not enough
-    int numPeople = [Person numberOfInstances];
+    NSUInteger numPeople = [Person numberOfInstances];
     while (numPeople < 26) {
         Person *p = [Person new];
         do {

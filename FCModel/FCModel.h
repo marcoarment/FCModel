@@ -167,6 +167,9 @@ extern NSString * const FCModelChangedFieldsKey;
 //
 + (FCModelFieldInfo *)infoForFieldName:(NSString *)fieldName;
 
+// Value Transformer: If you wish to store non-native objects, a reversible value transformer must be provided
++ (NSValueTransformer *)valueTransformerForFieldName:(NSString *)fieldName;
+
 // Closing the database is not necessary in most cases. Only close it if you need to, such as if you need to delete and recreate
 //  the database file. Warning: Any FCModel call after closing will bizarrely fail until you call openDatabaseAtPath: again.
 //

@@ -8,6 +8,7 @@
 
 #import <XCTest/XCTest.h>
 #import "FCModel.h"
+#import "AdvancedModel.h"
 #import "SimpleModel.h"
 #import "SimplerModel.h"
 
@@ -41,6 +42,49 @@
     SimpleModel *entity2 = [SimpleModel instanceWithPrimaryKey:@"a"];
     XCTAssertTrue(entity2.existsInDatabase);
     XCTAssertTrue([entity2.name isEqualToString:entity1.name]);
+}
+
+- (void)testValueTransformStoreRetrieve
+{
+    AdvancedModel *entity1 = [AdvancedModel instanceWithPrimaryKey:@"a"];
+    entity1.url = [NSURL URLWithString:@"http://example.com"];
+    XCTAssertFalse(entity1.existsInDatabase);
+    XCTAssertEqual([entity1 save], YES);
+    XCTAssertTrue(entity1.existsInDatabase);
+
+    AdvancedModel *entity2 = [AdvancedModel instanceWithPrimaryKey:@"a"];
+    XCTAssertTrue(entity2.existsInDatabase);
+    XCTAssertTrue([entity2.url isEqual:entity1.url]);
+}
+
+- (void)testBasicReloadAndSave
+{
+    SimpleModel *entity1 = [SimpleModel instanceWithPrimaryKey:@"a"];
+    entity1.name = @"Alice";
+    XCTAssertEqual([entity1 save], YES);
+
+    XCTAssertEqual([entity1 reloadAndSave:^{
+        entity1.name = @"Bob";
+    }], YES);
+
+    SimpleModel *entity2 = [SimpleModel instanceWithPrimaryKey:@"a"];
+    XCTAssertTrue(entity2.existsInDatabase);
+    XCTAssertTrue([entity2.name isEqualToString:entity1.name]);
+}
+
+- (void)testValueTransformReloadAndSave
+{
+    AdvancedModel *entity1 = [AdvancedModel instanceWithPrimaryKey:@"a"];
+    entity1.url = [NSURL URLWithString:@"http://example.com"];
+    XCTAssertEqual([entity1 save], YES);
+
+    XCTAssertEqual([entity1 reloadAndSave:^{
+        entity1.url = [NSURL URLWithString:@"https://github.com/marcoarment/FCModel"];
+    }], YES);
+
+    AdvancedModel *entity2 = [AdvancedModel instanceWithPrimaryKey:@"a"];
+    XCTAssertTrue(entity2.existsInDatabase);
+    XCTAssertTrue([entity2.url isEqual:entity1.url]);
 }
 
 - (void)testEntityNonUniquing
@@ -394,6 +438,19 @@
 
             *schemaVersion = 1;
         }
+
+        if (*schemaVersion < 2) {
+            if (![db executeUpdate:
+                  @"CREATE TABLE AdvancedModel ("
+                  @"    uniqueID TEXT PRIMARY KEY,"
+                  @"    url      TEXT"
+                  @");"
+            ]) failedAt(3);
+
+
+            *schemaVersion = 2;
+        }
+
         [db commit];
     }];
 }

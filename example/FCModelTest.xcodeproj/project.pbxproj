@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4741659D1A8043D70045C12E /* FCModelConcurrentMutableDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = 4741659A1A8043D70045C12E /* FCModelConcurrentMutableDictionary.m */; };
+		4741659E1A8043D70045C12E /* FCModelNotificationCenter.m in Sources */ = {isa = PBXBuildFile; fileRef = 4741659C1A8043D70045C12E /* FCModelNotificationCenter.m */; };
+		47C9F8DE1A8044710009FC84 /* AdvancedModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 47C9F8DD1A8044710009FC84 /* AdvancedModel.m */; };
 		49B84BD219A5D8850070B159 /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFB1A17E4D2830066C5EA /* libsqlite3.dylib */; };
 		9230D6FB17F32EF1000C9C87 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9230D6FA17F32EF1000C9C87 /* XCTest.framework */; };
 		9230D6FC17F32EF1000C9C87 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC217E4C8EE0066C5EA /* Foundation.framework */; };
@@ -53,6 +56,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		474165991A8043D70045C12E /* FCModelConcurrentMutableDictionary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelConcurrentMutableDictionary.h; sourceTree = "<group>"; };
+		4741659A1A8043D70045C12E /* FCModelConcurrentMutableDictionary.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelConcurrentMutableDictionary.m; sourceTree = "<group>"; };
+		4741659B1A8043D70045C12E /* FCModelNotificationCenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FCModelNotificationCenter.h; sourceTree = "<group>"; };
+		4741659C1A8043D70045C12E /* FCModelNotificationCenter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FCModelNotificationCenter.m; sourceTree = "<group>"; };
+		47C9F8DC1A8044710009FC84 /* AdvancedModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AdvancedModel.h; sourceTree = "<group>"; };
+		47C9F8DD1A8044710009FC84 /* AdvancedModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AdvancedModel.m; sourceTree = "<group>"; };
 		9230D6F917F32EF1000C9C87 /* FCModelTest Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "FCModelTest Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9230D6FA17F32EF1000C9C87 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		9230D70017F32EF1000C9C87 /* FCModelTest Tests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "FCModelTest Tests-Info.plist"; sourceTree = "<group>"; };
@@ -139,6 +148,8 @@
 			isa = PBXGroup;
 			children = (
 				9230D70417F32EF1000C9C87 /* FCModelTest_Tests.m */,
+				47C9F8DC1A8044710009FC84 /* AdvancedModel.h */,
+				47C9F8DD1A8044710009FC84 /* AdvancedModel.m */,
 				9230D70C17F332F4000C9C87 /* SimpleModel.h */,
 				9230D70D17F332F5000C9C87 /* SimpleModel.m */,
 				A92A8E3D19189026000A9B46 /* SimplerModel.h */,
@@ -234,6 +245,10 @@
 				A924EA2E18D0EC94000C28BD /* FCModelCachedObject.m */,
 				A924EA2F18D0EC94000C28BD /* FCModelDatabaseQueue.h */,
 				A924EA3018D0EC94000C28BD /* FCModelDatabaseQueue.m */,
+				4741659B1A8043D70045C12E /* FCModelNotificationCenter.h */,
+				4741659C1A8043D70045C12E /* FCModelNotificationCenter.m */,
+				474165991A8043D70045C12E /* FCModelConcurrentMutableDictionary.h */,
+				4741659A1A8043D70045C12E /* FCModelConcurrentMutableDictionary.m */,
 			);
 			name = FCModel;
 			path = ../../FCModel;
@@ -311,7 +326,7 @@
 		A9EEFAB717E4C8EE0066C5EA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0510;
+				LastUpgradeCheck = 0610;
 				ORGANIZATIONNAME = "Marco Arment";
 				TargetAttributes = {
 					9230D6F817F32EF1000C9C87 = {
@@ -366,6 +381,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A92A8E3F19189026000A9B46 /* SimplerModel.m in Sources */,
+				47C9F8DE1A8044710009FC84 /* AdvancedModel.m in Sources */,
 				9230D70517F32EF1000C9C87 /* FCModelTest_Tests.m in Sources */,
 				9230D70E17F332F5000C9C87 /* SimpleModel.m in Sources */,
 			);
@@ -375,11 +391,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4741659D1A8043D70045C12E /* FCModelConcurrentMutableDictionary.m in Sources */,
 				A9EEFB2817E6AF970066C5EA /* Color.m in Sources */,
 				A9EEFB2C17E6BCF80066C5EA /* FMDatabasePool.m in Sources */,
 				A9EEFB2117E4E39A0066C5EA /* RandomThings.m in Sources */,
 				A924EA3118D0EC94000C28BD /* FCModelCachedObject.m in Sources */,
 				A9B741F91A36480600CF42CE /* FCModelInstanceCache.m in Sources */,
+				4741659E1A8043D70045C12E /* FCModelNotificationCenter.m in Sources */,
 				A924EA3218D0EC94000C28BD /* FCModelDatabaseQueue.m in Sources */,
 				A9EEFADC17E4C8EE0066C5EA /* ViewController.m in Sources */,
 				A9EEFAD317E4C8EE0066C5EA /* AppDelegate.m in Sources */,
@@ -427,7 +445,6 @@
 		9230D70917F32EF1000C9C87 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
 				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/FCModelTest.app/FCModelTest";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(SDKROOT)/Developer/Library/Frameworks",
@@ -450,7 +467,6 @@
 		9230D70A17F32EF1000C9C87 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
 				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/FCModelTest.app/FCModelTest";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(SDKROOT)/Developer/Library/Frameworks",
@@ -470,7 +486,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
@@ -510,7 +525,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
