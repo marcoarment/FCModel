@@ -19,7 +19,7 @@
 //  - Leaving any open FMResultSets after an inDatabase block raises an exception rather than logging a warning.
 //  - The FMDatabase object is exposed as a readonly property for advanced, careful use if necessary.
 
-@interface FCModelDatabaseQueue : NSOperationQueue
+@interface FCModelDatabaseQueue : NSObject
 
 - (instancetype)initWithDatabasePath:(NSString *)filename;
 - (void)startMonitoringForExternalChanges;

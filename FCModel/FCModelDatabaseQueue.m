@@ -54,8 +54,6 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 - (instancetype)initWithDatabasePath:(NSString *)path
 {
     if ( (self = [super init]) ) {
-        self.name = NSStringFromClass(self.class);
-        self.maxConcurrentOperationCount = 1;
         self.path = path;
         self.enqueuedChangedFieldsByClass = [NSMutableDictionary dictionary];
         dispatchFileWriteQueue = dispatch_queue_create(NULL, NULL);
@@ -113,12 +111,8 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 
 - (void)execOnSelfSync:(void (^)())block
 {
-    if (NSOperationQueue.currentQueue == self) {
-        block();
-    } else {
-        NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:block];
-        [self addOperations:@[ operation ] waitUntilFinished:YES];
-    }
+    if (NSThread.isMainThread) block();
+    else dispatch_sync(dispatch_get_main_queue(), block);
 }
 
 - (void)close

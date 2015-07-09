@@ -9,7 +9,6 @@
 #import <string.h>
 #import "FCModel.h"
 #import "FCModelCachedObject.h"
-#import "FCModelInstanceCache.h"
 #import "FCModelDatabaseQueue.h"
 #import "FCModelNotificationCenter.h"
 #import "FMDatabase.h"
@@ -24,11 +23,11 @@ NSString * const FCModelChangedFieldsKey = @"FCModelChangedFieldsKey";
 
 NSString * const FCModelWillSendChangeNotification = @"FCModelWillSendChangeNotification"; // for FCModelCachedObject
 
+static NSMutableDictionary *g_instances = NULL;
 static FCModelDatabaseQueue *g_databaseQueue = NULL;
 static NSDictionary *g_fieldInfo = NULL;
 static NSDictionary *g_ignoredFieldNames = NULL;
 static NSDictionary *g_primaryKeyFieldName = NULL;
-static FCModelInstanceCache *g_instanceCache = NULL;
 
 typedef NS_ENUM(char, FCModelInDatabaseStatus) {
     FCModelInDatabaseStatusNotYetInserted = 0,
@@ -45,8 +44,14 @@ typedef NS_ENUM(char, FCModelInDatabaseStatus) {
 
 static inline void onMainThreadAsync(void (^block)())
 {
-    if ([NSThread isMainThread]) block();
+    if (NSThread.isMainThread) block();
     else dispatch_async(dispatch_get_main_queue(), block);
+}
+
+static inline void onMainThreadSync(void (^block)())
+{
+    if (NSThread.isMainThread) block();
+    else dispatch_sync(dispatch_get_main_queue(), block);
 }
 
 static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
@@ -82,6 +87,28 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 @implementation FCModel
 
+// For unique-instance consistency:
+// Resolve discrepancies between supplied primary-key value type and the column type that comes out of the database.
+// Without this, it's possible to e.g. pull objects with key @1 and key @"1" as two different instances of the same record.
++ (id)normalizedPrimaryKeyValue:(id)value
+{
+    static NSNumberFormatter *numberFormatter;
+    static dispatch_once_t onceToken;
+
+    if (! value || value == NSNull.null) return nil;
+    
+    FCModelFieldInfo *primaryKeyInfo = g_fieldInfo[self][g_primaryKeyFieldName[self]];
+    
+    if ([value isKindOfClass:NSString.class] && (primaryKeyInfo.type == FCModelFieldTypeInteger || primaryKeyInfo.type == FCModelFieldTypeDouble || primaryKeyInfo.type == FCModelFieldTypeBool)) {
+        dispatch_once(&onceToken, ^{ numberFormatter = [[NSNumberFormatter alloc] init]; });
+        value = [numberFormatter numberFromString:value];
+    } else if (! [value isKindOfClass:NSString.class] && primaryKeyInfo.type == FCModelFieldTypeText) {
+        value = [value stringValue];
+    }
+
+    return value;
+}
+
 - (BOOL)isDeleted { return _inDatabaseStatus == FCModelInDatabaseStatusDeleted; }
 - (BOOL)existsInDatabase { return _inDatabaseStatus == FCModelInDatabaseStatusRowExists; }
 - (void)didInit { } // For subclasses to override
@@ -92,20 +119,28 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue databaseRowValues:(NSDictionary *)fieldValues createIfNonexistent:(BOOL)create
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
-
+    primaryKeyValue = [self normalizedPrimaryKeyValue:primaryKeyValue];
     if (! primaryKeyValue || primaryKeyValue == NSNull.null) return (create ? [self new] : nil);
     
-    FCModel *instance = instance = fieldValues ? [[self alloc] initWithFieldValues:fieldValues existsInDatabaseAlready:YES] : [self instanceFromDatabaseWithPrimaryKey:primaryKeyValue];
-    if (instance) [g_instanceCache saveInstance:instance];
-    if (! instance && create) instance = [[self alloc] initWithFieldValues:@{ g_primaryKeyFieldName[self] : primaryKeyValue } existsInDatabaseAlready:NO];
+    __block FCModel *instance = nil;
+    onMainThreadSync(^{
+        if (! g_instances) g_instances = [NSMutableDictionary dictionary];
+        NSMapTable *classCache = g_instances[self];
+        if (! classCache) classCache = g_instances[(id) self] = [NSMapTable strongToWeakObjectsMapTable];
+        instance = [classCache objectForKey:primaryKeyValue];
+
+        if (! instance) {
+            instance = fieldValues ? [[self alloc] initWithFieldValues:fieldValues existsInDatabaseAlready:YES] : [self instanceFromDatabaseWithPrimaryKey:primaryKeyValue];
+            if (! instance && create) instance = [[self alloc] initWithFieldValues:@{ g_primaryKeyFieldName[self] : primaryKeyValue } existsInDatabaseAlready:NO];
+            if (instance) [classCache setObject:instance forKey:primaryKeyValue];
+        }
+    });
+
     return instance;
 }
 
 + (instancetype)instanceFromDatabaseWithPrimaryKey:(id)key
 {
-    id existing = [g_instanceCache instanceOfClass:self withPrimaryKeyValue:key];
-    if (existing) return [existing copy];
-
     __block FCModel *model = NULL;
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
         FMResultSet *s = [db executeQuery:[self expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], key];
@@ -191,6 +226,12 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             [g_databaseQueue.enqueuedChangedFieldsByClass removeAllObjects];
         }
     }];
+    
+    onMainThreadSync(^{
+        [g_instances enumerateKeysAndObjectsUsingBlock:^(Class key, NSMapTable *classCache, BOOL *stop) {
+            for (FCModel *m in classCache.objectEnumerator.allObjects) [m reload];
+        }];
+    });
     
     // Send notifications
     if (changedFieldsToNotify) {
@@ -587,7 +628,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         hadChanges = YES;
     }];
     
-    [g_instanceCache saveInstance:self];
     if (hadChanges) [self.class postChangeNotificationWithChangedFields:changedFields];
     return hadChanges;
 }
@@ -610,8 +650,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
         _inDatabaseStatus = FCModelInDatabaseStatusDeleted;
     }];
+    
+    onMainThreadSync(^{
+        [g_instances[self.class] removeObjectForKey:pkValue];
+    });
 
-    [g_instanceCache removeInstanceOfClass:self.class withPrimaryKeyValue:pkValue];
     [self.class postChangeNotificationWithChangedFields:nil];
 }
 
@@ -833,19 +876,17 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     }];
 
     [g_databaseQueue startMonitoringForExternalChanges];
-    g_instanceCache = [[FCModelInstanceCache alloc] init];
 }
 
 + (void)closeDatabase
 {
     if (g_databaseQueue) {
         [g_databaseQueue close];
-        [g_databaseQueue waitUntilAllOperationsAreFinished];
         g_databaseQueue = nil;
     }
     
     [FCModelCachedObject clearCache];
-    [g_instanceCache removeAllInstances];
+    [g_instances removeAllObjects];
     g_primaryKeyFieldName = nil;
     g_fieldInfo = nil;
     g_ignoredFieldNames = nil;

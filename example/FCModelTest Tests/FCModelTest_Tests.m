@@ -43,13 +43,13 @@
     XCTAssertTrue([entity2.name isEqualToString:entity1.name]);
 }
 
-- (void)testEntityNonUniquing
+- (void)testEntityUniquing
 {
     SimpleModel *entity1 = [SimpleModel instanceWithPrimaryKey:@"a"];
     [entity1 save];
     
     SimpleModel *entity2 = [SimpleModel instanceWithPrimaryKey:@"a"];
-    XCTAssertTrue(entity2 != entity1);
+    XCTAssertTrue(entity2 == entity1);
 }
 
 - (void)testDatabaseCloseFlushesCache
