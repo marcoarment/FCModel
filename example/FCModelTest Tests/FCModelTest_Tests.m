@@ -33,9 +33,8 @@
 - (void)testBasicStoreRetrieve
 {
     SimpleModel *entity1 = [SimpleModel instanceWithPrimaryKey:@"a"];
-    entity1.name = @"Alice";
     XCTAssertFalse(entity1.existsInDatabase);
-    XCTAssertEqual([entity1 save], YES);
+    XCTAssertEqual([entity1 save:^{ entity1.name = @"Alice"; }], YES);
     XCTAssertTrue(entity1.existsInDatabase);
 
     SimpleModel *entity2 = [SimpleModel instanceWithPrimaryKey:@"a"];
@@ -46,7 +45,7 @@
 - (void)testEntityUniquing
 {
     SimpleModel *entity1 = [SimpleModel instanceWithPrimaryKey:@"a"];
-    [entity1 save];
+    [entity1 save:nil];
     
     SimpleModel *entity2 = [SimpleModel instanceWithPrimaryKey:@"a"];
     XCTAssertTrue(entity2 == entity1);
@@ -57,8 +56,9 @@
     void *e1ptr;
     @autoreleasepool {
         SimpleModel *entity1 = [SimpleModel instanceWithPrimaryKey:@"a"];
-        entity1.name = @"Alice";
-        [entity1 save];
+        [entity1 save:^{
+            entity1.name = @"Alice";
+        }];
         e1ptr = (__bridge void *)(entity1);
         entity1 = nil;
     }
@@ -83,15 +83,17 @@
 {
     NSDate *date = [NSDate date];
     SimpleModel *entity1 = [SimpleModel new];
-    entity1.date = date;
-    BOOL saveResult1 = [entity1 save];
+    BOOL saveResult1 = [entity1 save:^{
+        entity1.date = date;
+    }];
     XCTAssertEqual(saveResult1, YES);
-    BOOL saveResult2 = [entity1 save];
+    BOOL saveResult2 = [entity1 save:^{}];
     XCTAssertEqual(saveResult2, NO, @"Repeated saves should yield no changes");
     
     // actually changing the date should cause changes during save
-    entity1.date = [NSDate dateWithTimeIntervalSinceNow:1];
-    BOOL saveResult3 = [entity1 save];
+    BOOL saveResult3 = [entity1 save:^{
+        entity1.date = [NSDate dateWithTimeIntervalSinceNow:1];
+    }];
     XCTAssertEqual(saveResult3, YES);
 }
 
@@ -182,23 +184,26 @@
     ];
 
     SimpleModel *insertModel = [SimpleModel new];
-    insertModel.name = @"insert";
-    [insertModel save];
+    [insertModel save:^{
+        insertModel.name = @"insert";
+    }];
     
     XCTAssert(anyChgNotificationsNoClass == 1, @"[1] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
     XCTAssert(anyChgNotificationsClass1  == 1, @"[1] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
     XCTAssert(anyChgNotificationsClass2  == 0, @"[1] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
 
     SimplerModel *insertModel2 = [SimplerModel new];
-    insertModel2.title = @"insert2";
-    [insertModel2 save];
+    [insertModel2 save:^{
+        insertModel2.title = @"insert2";
+    }];
 
     XCTAssert(anyChgNotificationsNoClass == 2, @"[2] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
     XCTAssert(anyChgNotificationsClass1  == 1, @"[2] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
     XCTAssert(anyChgNotificationsClass2  == 1, @"[2] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
 
-    insertModel2.title = @"update2";
-    [insertModel2 save];
+    [insertModel2 save:^{
+        insertModel2.title = @"update2";
+    }];
 
     XCTAssert(anyChgNotificationsNoClass == 3, @"[3] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
     XCTAssert(anyChgNotificationsClass1  == 1, @"[3] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
@@ -238,23 +243,26 @@
 
     [FCModel performTransaction:^BOOL{
         SimpleModel *insertModel = [SimpleModel new];
-        insertModel.name = @"insert";
-        [insertModel save];
+        [insertModel save:^{
+            insertModel.name = @"insert";
+        }];
         
         XCTAssert(anyChgNotificationsNoClass == 0, @"[1] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
         XCTAssert(anyChgNotificationsClass1  == 0, @"[1] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
         XCTAssert(anyChgNotificationsClass2  == 0, @"[1] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
 
         SimplerModel *insertModel2 = [SimplerModel new];
-        insertModel2.title = @"insert2";
-        [insertModel2 save];
+        [insertModel2 save:^{
+            insertModel2.title = @"insert2";
+        }];
 
         XCTAssert(anyChgNotificationsNoClass == 0, @"[2] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
         XCTAssert(anyChgNotificationsClass1  == 0, @"[2] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
         XCTAssert(anyChgNotificationsClass2  == 0, @"[2] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
 
-        insertModel2.title = @"update2";
-        [insertModel2 save];
+        [insertModel2 save:^{
+            insertModel2.title = @"update2";
+        }];
 
         XCTAssert(anyChgNotificationsNoClass == 0, @"[3] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
         XCTAssert(anyChgNotificationsClass1  == 0, @"[3] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
@@ -301,31 +309,36 @@
     NSSet *allClass2Fields = [NSSet setWithArray:SimplerModel.databaseFieldNames];
 
     SimpleModel *insertModel = [SimpleModel new];
-    insertModel.name = @"insert";
-    [insertModel save];
+    [insertModel save:^{
+        insertModel.name = @"insert";
+    }];
     XCTAssert([changedFieldsClass1 isEqualToSet:allClass1Fields], @"Insert reported wrong field names: %@", changedFieldsClass1);
 
     changedFieldsClass1 = nil;
-    insertModel.name = @"update";
-    [insertModel save];
+    [insertModel save:^{
+        insertModel.name = @"update";
+    }];
     XCTAssert([changedFieldsClass1 isEqualToSet:[NSSet setWithObject:@"name"]], @"Update reported wrong field names: %@", changedFieldsClass1);
 
     SimplerModel *insertModel2 = [SimplerModel new];
-    insertModel2.title = @"insert2";
-    [insertModel2 save];
+    [insertModel2 save:^{
+        insertModel2.title = @"insert2";
+    }];
     XCTAssert([changedFieldsClass2 isEqualToSet:allClass2Fields], @"Insert2 reported wrong field names: %@", changedFieldsClass2);
     
     // Batching
     
     changedFieldsClass1 = nil;
     [FCModel performTransaction:^BOOL{
-        insertModel.name = @"batchedUpdate";
-        insertModel.lowercase = @"whatever";
-        [insertModel save];
+        [insertModel save:^{
+            insertModel.name = @"batchedUpdate";
+            insertModel.lowercase = @"whatever";
+        }];
         XCTAssert(changedFieldsClass1 == nil, @"Batched update reported wrong field names: %@", changedFieldsClass1);
 
-        insertModel.mixedcase = 2;
-        [insertModel save];
+        [insertModel save:^{
+            insertModel.mixedcase = 2;
+        }];
         XCTAssert(changedFieldsClass1 == nil, @"Batched update2 reported wrong field names: %@", changedFieldsClass1);
         
         return YES;

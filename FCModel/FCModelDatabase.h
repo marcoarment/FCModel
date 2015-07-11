@@ -1,5 +1,5 @@
 //
-//  FCModelDatabaseQueue.h
+//  FCModelDatabase.h
 //
 //  Created by Marco Arment on 3/12/14.
 //  Copyright (c) 2014 Marco Arment. See included LICENSE file.
@@ -13,18 +13,12 @@
 #import "FMDatabase.h"
 #endif
 
-// This serves the same role as FMDB's FMDatabaseQueue for FCModel, but with some differences:
-//
-//  - inDatabase calls can be nested without deadlocking. (See execOnSelfSync: in implementation.)
-//  - Leaving any open FMResultSets after an inDatabase block raises an exception rather than logging a warning.
-//  - The FMDatabase object is exposed as a readonly property for advanced, careful use if necessary.
-
-@interface FCModelDatabaseQueue : NSObject
+@interface FCModelDatabase : NSObject
 
 - (instancetype)initWithDatabasePath:(NSString *)filename;
 - (void)startMonitoringForExternalChanges;
-- (void)inDatabase:(void (^)(FMDatabase *db))block;
 - (void)close;
+- (void)inDatabase:(void (^)(FMDatabase *db))block;
 
 @property (nonatomic, readonly) FMDatabase *database;
 @property (nonatomic, readonly) NSMutableDictionary *enqueuedChangedFieldsByClass;

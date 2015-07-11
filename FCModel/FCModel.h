@@ -37,7 +37,7 @@ extern NSString * const FCModelInstanceKey;
 extern NSString * const FCModelChangedFieldsKey;
 
 
-@interface FCModel : NSObject <NSCopying>
+@interface FCModel : NSObject
 
 @property (readonly) id primaryKey;
 @property (readonly) NSDictionary *allFields;
@@ -67,7 +67,6 @@ extern NSString * const FCModelChangedFieldsKey;
 - (void)revertUnsavedChanges;
 - (void)revertUnsavedChangeToFieldName:(NSString *)fieldName;
 - (void)delete;
-- (BOOL)save; // returns YES if there were any changes
 
 // SELECTs allow optional query placeholders:
 //      $T  - This model's table name
@@ -125,17 +124,17 @@ extern NSString * const FCModelChangedFieldsKey;
 // Safe-writing helpers:
 //  - reload: reloads the current database values into this instance, overwriting any unsaved changes
 //
-//  - reloadAndSave:modificiationsBlock: Performs a "safe save" intended to prevent race conditions between loading, modifying, and saving.
-//      Don't call -save within modificiationsBlock -- simply make your modifications on the instance you're working on, e.g.:
+//  - save:modificiationsBlock: Performs a "safe save" intended to prevent race conditions between loading, modifying, and saving.
+//      Simply make your modifications on the instance you're working on inside the block, e.g.:
 //
-//      [person reloadAndSave:^{
+//      [person save:^{
 //          person.name = @"Susan";
 //      }];
 //
 //  Both return YES if the transaction succeeded. May return NO if, for instance, the instance gets deleted beforehand.
 //
 - (BOOL)reload;
-- (BOOL)reloadAndSave:(void (^)())modificiationsBlock;
+- (BOOL)save:(void (^)())modificiationsBlock;
 
 // Notification shortcuts: call on an FCModel subclass to be notified for only changes to certain fields
 + (void)addObserver:(id)target selector:(SEL)action forChangedFields:(NSSet *)fieldNamesToWatch;
@@ -201,4 +200,14 @@ typedef NS_ENUM(NSInteger, FCModelFieldType) {
 @property (nonatomic, readonly) Class propertyClass;
 @property (nonatomic, readonly) NSString *propertyTypeEncoding;
 @end
+
+
+// Utility function used throughout FCModel:
+// If we're currently on the main thread, run block() sync, otherwise dispatch block() sync to main thread.
+inline __attribute__((always_inline)) void fcm_onMainThread(void (^block)())
+{
+    if (block) {
+        if (NSThread.isMainThread) block(); else dispatch_sync(dispatch_get_main_queue(), block);
+    }
+}
 

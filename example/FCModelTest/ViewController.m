@@ -70,8 +70,9 @@
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
 {
     Person *p = (Person *) self.people[indexPath.row];
-    p.taps = p.taps + 1;
-    [p save];
+    [p save:^{
+        p.taps++;
+    }];
     
     [collectionView deselectItemAtIndexPath:indexPath animated:YES];
 }

@@ -96,8 +96,9 @@
         @"gray2" : @"C6C6CC",
     } enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSString *hex, BOOL *stop) {
         Color *c = [Color instanceWithPrimaryKey:name];
-        c.hex = hex;
-        [c save];
+        [c save:^{
+            c.hex = hex;
+        }];
     }];
     
     Color *testUniqueRed1 = [Color instanceWithPrimaryKey:@"red"];
@@ -116,25 +117,26 @@
     NSMutableSet *colorsUsedAlready = [NSMutableSet set];
     
     // Put some data in the table if there's not enough
-    int numPeople = [Person numberOfInstances];
+    NSUInteger numPeople = [Person numberOfInstances];
     while (numPeople < 26) {
         Person *p = [Person new];
-        do {
-            p.name = [RandomThings randomName];
-        } while ([Person firstInstanceWhere:@"name = ?" arguments:@[p.name]]);
-        
-        
-        if (colorsUsedAlready.count >= allColors.count) [colorsUsedAlready removeAllObjects];
-        
-        Color *color;
-        do {
-            color = (Color *) allColors[([RandomThings randomUInt32] % allColors.count)];
-        } while ([colorsUsedAlready member:color] && colorsUsedAlready.count < allColors.count);
+        [p save:^{
+            do {
+                p.name = [RandomThings randomName];
+            } while ([Person firstInstanceWhere:@"name = ?" arguments:@[p.name]]);
 
-        [colorsUsedAlready addObject:color];
-        p.color = color;
+            if (colorsUsedAlready.count >= allColors.count) [colorsUsedAlready removeAllObjects];
+            
+            Color *color;
+            do {
+                color = (Color *) allColors[([RandomThings randomUInt32] % allColors.count)];
+            } while ([colorsUsedAlready member:color] && colorsUsedAlready.count < allColors.count);
+
+            [colorsUsedAlready addObject:color];
+            p.color = color;
+        }];
         
-        if ([p save]) numPeople++;
+        numPeople++;
     }
     
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];

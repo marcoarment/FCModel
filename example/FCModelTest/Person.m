@@ -11,11 +11,13 @@
 @implementation Person
 
 
-- (BOOL)save
+- (BOOL)save:(void (^)())modificiationsBlock
 {
-    if (self.hasUnsavedChanges) self.modifiedTime = [NSDate date];
-    if (! self.existsInDatabase) self.createdTime = [NSDate date];
-    return [super save];
+    return [super save:^{
+        if (self.hasUnsavedChanges) self.modifiedTime = [NSDate date];
+        if (! self.existsInDatabase) self.createdTime = [NSDate date];
+        modificiationsBlock();
+    }];
 }
 
 - (Color *)color
