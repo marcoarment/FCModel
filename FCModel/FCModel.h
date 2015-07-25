@@ -182,6 +182,9 @@ extern NSString * const FCModelChangedFieldsKey;
 //
 + (BOOL)databaseIsOpen;
 
+// All instances of the called class in memory. Call on a subclass, not FCModel directly. You probably don't need this, until you do.
++ (NSArray *)allLoadedInstances;
+
 @end
 
 

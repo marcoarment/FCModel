@@ -101,6 +101,16 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 - (BOOL)existsInDatabase { return _inDatabaseStatus == FCModelInDatabaseStatusRowExists; }
 - (void)didInit { } // For subclasses to override
 
++ (NSArray *)allLoadedInstances
+{
+    __block NSArray *outArray = nil;
+    fcm_onMainThread(^{
+        NSMapTable *classCache = g_instances ? g_instances[self] : nil;
+        outArray = classCache.objectEnumerator.allObjects;
+    });
+    return outArray ?: @[];
+}
+
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue { return [self instanceWithPrimaryKey:primaryKeyValue databaseRowValues:nil createIfNonexistent:YES]; }
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create { return [self instanceWithPrimaryKey:primaryKeyValue databaseRowValues:nil createIfNonexistent:create]; }
 
