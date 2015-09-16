@@ -130,7 +130,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 id suppliedValue = s.resultDictionary[key];
                 if (suppliedValue) [self setValue:(suppliedValue == NSNull.null ? nil : suppliedValue) forKey:key];
             }];
-
+            
+            _inDatabaseStatus = FCModelInDatabaseStatusRowExists;
             self._rowValuesInDatabase = s.resultDictionary;
         }
         [s close];
