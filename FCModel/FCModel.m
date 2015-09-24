@@ -1372,7 +1372,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 for (NSString *key in keys) {
                     [NSNotificationCenter.defaultCenter postNotificationName:key object:class userInfo:@{
                         FCModelInstanceSetKey : notificationsForClass[key],
-                        FCModelChangedFieldsKey : changedFields[class]
+                        FCModelChangedFieldsKey : changedFields[class] ?: [NSSet set]
                     }];
                 }
             }];
