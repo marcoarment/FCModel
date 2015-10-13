@@ -464,8 +464,17 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return @(random);
 }
 
-+ (instancetype)new  { return [[self alloc] initWithFieldValues:@{} existsInDatabaseAlready:NO]; }
-- (instancetype)init { return [self initWithFieldValues:@{} existsInDatabaseAlready:NO]; }
+- (instancetype)init
+{
+    self = [self initWithFieldValues:@{} existsInDatabaseAlready:NO];
+    fcm_onMainThread(^{
+        if (! g_instances) g_instances = [NSMutableDictionary dictionary];
+        NSMapTable *classCache = g_instances[self.class];
+        if (! classCache) classCache = g_instances[(id) self.class] = [NSMapTable strongToWeakObjectsMapTable];
+        [classCache setObject:self forKey:self.primaryKey];
+    });
+    return self;
+}
 
 - (instancetype)initWithFieldValues:(NSDictionary *)fieldValues existsInDatabaseAlready:(BOOL)existsInDB
 {
