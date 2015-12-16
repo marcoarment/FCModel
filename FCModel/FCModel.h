@@ -63,6 +63,10 @@ extern NSString * const FCModelChangedFieldsKey;
 // CRUD basics
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue; // will create if nonexistent
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create; // will return nil if nonexistent
+
+- (instancetype)initWithPrimaryKey:(id)primaryKeyValue;
+- (instancetype)initWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create;
+
 - (NSArray *)changedFieldNames;
 - (void)revertUnsavedChanges;
 - (void)revertUnsavedChangeToFieldName:(NSString *)fieldName;

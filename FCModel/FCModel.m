@@ -137,6 +137,10 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return instance;
 }
 
+- (instancetype)initWithPrimaryKey:(id)primaryKeyValue { return [self.class instanceWithPrimaryKey:primaryKeyValue]; }
+- (instancetype)initWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create { return [self.class instanceWithPrimaryKey:primaryKeyValue createIfNonexistent:create]; }
+- (instancetype)initWithPrimaryKey:(id)primaryKeyValue databaseRowValues:(NSDictionary *)fieldValues createIfNonexistent:(BOOL)create { return [self.class instanceWithPrimaryKey:primaryKeyValue databaseRowValues:fieldValues createIfNonexistent:create]; }
+
 + (instancetype)instanceFromDatabaseWithPrimaryKey:(id)key
 {
     __block FCModel *model = NULL;
