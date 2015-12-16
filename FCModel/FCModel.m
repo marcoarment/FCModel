@@ -684,7 +684,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 #pragma mark - Utilities
 
-- (id)primaryKey { return [self valueForKey:g_primaryKeyFieldName[[self.class tableName]]]; }
+- (id)primaryKey { return [self valueForKey:g_primaryKeyFieldName[self.class]]; }
 
 + (NSString *)tableName {
     NSString *className = NSStringFromClass(self);
