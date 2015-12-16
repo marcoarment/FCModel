@@ -45,6 +45,8 @@ extern NSString * const FCModelChangedFieldsKey;
 @property (readonly) BOOL existsInDatabase; // either deleted or never saved
 @property (readonly) BOOL isDeleted;
 
+// Swift classes have their module name prefixed onto their Objective-C class. To use FCModel with Swift, provide your module name.
+// You can find it in Xcode under Build Settings -> Product Module Name.
 + (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
 + (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder moduleName:(NSString *)moduleName;
 
