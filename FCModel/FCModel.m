@@ -28,6 +28,7 @@ static FCModelDatabase *g_database = NULL;
 static NSDictionary *g_fieldInfo = NULL;
 static NSDictionary *g_ignoredFieldNames = NULL;
 static NSDictionary *g_primaryKeyFieldName = NULL;
+static NSString *g_modulePrefix = NULL;
 
 typedef NS_ENUM(char, FCModelInDatabaseStatus) {
     FCModelInDatabaseStatusNotYetInserted = 0,
@@ -576,7 +577,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             NSArray *columnNames;
             NSMutableArray *values;
             
-            NSString *tableName = NSStringFromClass(self.class);
+            NSString *tableName = [self.class tableName];
             NSString *pkName = g_primaryKeyFieldName[self.class];
             id primaryKey = self.primaryKey;
             NSAssert1(primaryKey && (primaryKey != NSNull.null), @"Cannot update %@ without primary key value", NSStringFromClass(self.class));
@@ -685,11 +686,17 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 - (id)primaryKey { return [self valueForKey:g_primaryKeyFieldName[self.class]]; }
 
++ (NSString *)tableName {
+    NSString *className = NSStringFromClass(self);
+    if (g_modulePrefix) className = [className substringFromIndex:g_modulePrefix.length];
+    return className;
+}
+
 + (NSString *)expandQuery:(NSString *)query
 {
     if (self == FCModel.class) return query;
     query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
-    return [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
+    return [query stringByReplacingOccurrencesOfString:@"$T" withString:[self tableName]];
 }
 
 - (NSString *)description
@@ -709,7 +716,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 - (NSUInteger)hash
 {
-    return NSStringFromClass(self.class).hash ^ ((NSObject *)self.primaryKey).hash;
+    return [self.class tableName].hash ^ ((NSObject *)self.primaryKey).hash;
 }
 
 - (BOOL)isEqual:(id)object
@@ -741,6 +748,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 #pragma mark - Database management
 
 + (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder
+{
+    [self openDatabaseAtPath:path withDatabaseInitializer:databaseInitializer schemaBuilder:schemaBuilder moduleName:nil];
+}
+
++ (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder moduleName:(NSString *)moduleName
 {
     NSParameterAssert(NSThread.isMainThread);
     
@@ -774,7 +786,12 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
        ];
         while ([tablesRS next]) {
             NSString *tableName = [tablesRS stringForColumnIndex:0];
-            Class tableModelClass = NSClassFromString(tableName);
+            NSString *tableClass = tableName;
+            if (moduleName) {
+                g_modulePrefix = [moduleName stringByAppendingString:@"."];
+                tableClass = [g_modulePrefix stringByAppendingString:tableClass];
+            }
+            Class tableModelClass = NSClassFromString(tableClass);
             if (! tableModelClass || ! [tableModelClass isSubclassOfClass:self]) continue;
             
             NSString *primaryKeyName = nil;

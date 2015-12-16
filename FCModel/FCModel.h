@@ -46,6 +46,7 @@ extern NSString * const FCModelChangedFieldsKey;
 @property (readonly) BOOL isDeleted;
 
 + (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
++ (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder moduleName:(NSString *)moduleName;
 
 + (NSArray *)databaseFieldNames;
 + (NSString *)primaryKeyFieldName;
