@@ -192,6 +192,9 @@ extern NSString * const FCModelChangedFieldsKey;
 // All instances of the called class in memory. Call on a subclass, not FCModel directly. You probably don't need this, until you do.
 + (NSArray *)allLoadedInstances;
 
+// Issues SQLite VACUUM to rebuild database and recover deleted pages. Returns NO if a transaction is in progress that prevents it.
++ (BOOL)vacuumIfPossible;
+
 @end
 
 

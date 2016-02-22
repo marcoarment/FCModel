@@ -983,6 +983,20 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     }];
 }
 
++ (BOOL)vacuumIfPossible
+{
+    if (! checkForOpenDatabaseFatal(NO)) return NO;
+
+    __block BOOL success = NO;
+    [self inDatabaseSync:^(FMDatabase *db) {
+        if (db.inTransaction) return;
+        [db executeUpdate:@"VACUUM"];
+        success = YES;
+    }];
+    
+    return success;
+}
+
 + (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields
 {
     if (! changedFields) changedFields = [NSSet setWithArray:self.class.databaseFieldNames];
