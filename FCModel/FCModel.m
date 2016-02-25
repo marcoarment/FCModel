@@ -695,7 +695,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 + (NSString *)expandQuery:(NSString *)query
 {
     if (self == FCModel.class) return query;
-    query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
+    if (g_primaryKeyFieldName[self]) query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
     return [query stringByReplacingOccurrencesOfString:@"$T" withString:[self tableName]];
 }
 
