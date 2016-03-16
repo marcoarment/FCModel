@@ -7,7 +7,7 @@
 
 #import <Foundation/Foundation.h>
 
-#ifdef COCOAPODS
+#ifdef FMDB_FRAMEWORK
 #import <FMDB/FMDatabase.h>
 #else
 #import "FMDatabase.h"
