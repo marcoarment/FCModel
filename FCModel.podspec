@@ -8,7 +8,7 @@ Pod::Spec.new do |s|
   s.source = { :git => 'https://github.com/marcoarment/FCModel.git', :tag => s.version.to_s }
   s.source_files  = 'FCModel/*.{h,m}'
   s.requires_arc = true
-  s.dependency 'FMDB/SQLCiphher', '2.6.2'
+  s.dependency 'FMDB/SQLCipher', '2.6.2'
   s.ios.deployment_target = '6.0'
   s.osx.deployment_target = '10.8'
 end
