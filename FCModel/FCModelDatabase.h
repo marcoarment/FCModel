@@ -8,7 +8,7 @@
 #import <Foundation/Foundation.h>
 
 #ifdef COCOAPODS
-#import <FMDB/FMDatabase.h>
+#import <FMDB/FMDB.h>
 #else
 #import "FMDatabase.h"
 #endif

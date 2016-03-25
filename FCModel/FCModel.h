@@ -9,7 +9,7 @@
 #include <AvailabilityMacros.h>
 
 #ifdef COCOAPODS
-#import <FMDB/FMDatabase.h>
+#import <FMDB/FMDB.h>
 #else
 #import "FMDatabase.h"
 #endif
@@ -223,4 +223,3 @@ inline __attribute__((always_inline)) void fcm_onMainThread(void (^block)())
         if (NSThread.isMainThread) block(); else dispatch_sync(dispatch_get_main_queue(), block);
     }
 }
-
