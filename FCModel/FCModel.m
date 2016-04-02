@@ -29,6 +29,7 @@ static NSDictionary *g_fieldInfo = NULL;
 static NSDictionary *g_ignoredFieldNames = NULL;
 static NSDictionary *g_primaryKeyFieldName = NULL;
 static NSString *g_modulePrefix = NULL;
+static void (^dbErrorHandler)(NSException *proposedException, int dbErrorCode, NSString *dbErrorMessage) = NULL;
 
 typedef NS_ENUM(char, FCModelInDatabaseStatus) {
     FCModelInDatabaseStatusNotYetInserted = 0,
@@ -447,9 +448,17 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return allFoundInstances;
 }
 
++ (void)setQueryFailedHandler:(void (^)(NSException *proposedException, int dbErrorCode, NSString *dbErrorMessage))handler
+{
+    dbErrorHandler = handler;
+}
+
 + (void)queryFailedInDatabase:(FMDatabase *)db
 {
-    [[NSException exceptionWithName:FCModelException reason:[NSString stringWithFormat:@"Query failed with SQLite error %d: %@", db.lastErrorCode, db.lastErrorMessage] userInfo:nil] raise];
+    NSException *exception = [NSException exceptionWithName:FCModelException reason:[NSString stringWithFormat:@"Query failed with SQLite error %d: %@", db.lastErrorCode, db.lastErrorMessage] userInfo:nil];
+
+    if (dbErrorHandler) dbErrorHandler(exception, db.lastErrorCode, db.lastErrorMessage);
+    else [exception raise];
 }
 
 #pragma mark - Attributes and CRUD
