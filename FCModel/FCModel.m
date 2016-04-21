@@ -186,10 +186,13 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 {
     __block FCModel *model = NULL;
     [g_databaseQueue readDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], key];
-        if (! s) [self queryFailedInDatabase:db];
-        if ([s next]) model = [[self alloc] initWithFieldValues:s.resultDictionary existsInDatabaseAlready:YES];
-        [s close];
+        NSString *expandedQuery = [self expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"];
+        if (expandedQuery) {
+            FMResultSet *s = [db executeQuery:expandedQuery, key];
+            if (! s) [self queryFailedInDatabase:db];
+            if ([s next]) model = [[self alloc] initWithFieldValues:s.resultDictionary existsInDatabaseAlready:YES];
+            [s close];
+        }
     }];
     
     return model;
@@ -341,8 +344,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block BOOL success = NO;
     __block NSError *error = nil;
     [g_databaseQueue writeDatabase:^(FMDatabase *db) {
-        success = [db executeUpdate:[self expandQuery:query] error:nil withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
-        if (! success) error = [db.lastError copy];
+        NSString *expandedQuery = [self expandQuery:query];
+        if (expandedQuery) {
+            success = [db executeUpdate:expandedQuery error:nil withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+            if (! success) error = [db.lastError copy];
+        }
     }];
 
     va_end(args);
@@ -357,8 +363,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block BOOL success = NO;
     __block NSError *error = nil;
     [g_databaseQueue writeDatabase:^(FMDatabase *db) {
-        success = [db executeUpdate:[self expandQuery:query] error:nil withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
-        if (! success) error = [db.lastError copy];
+        NSString *expandedQuery = [self expandQuery:query];
+        if (expandedQuery) {
+            success = [db executeUpdate:expandedQuery error:nil withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
+            if (! success) error = [db.lastError copy];
+        }
     }];
 
     if (success) [self dataWasUpdatedExternally];
@@ -394,20 +403,20 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         while (! stop && [existingResultSet next]) processResult(existingResultSet, &stop);
     } else {
         [g_databaseQueue readDatabase:^(FMDatabase *db) {
-            FMResultSet *s = [db
-                executeQuery:(
-                    query ?
-                    [self expandQuery:[@"SELECT * FROM \"$T\" WHERE " stringByAppendingString:query]] :
-                    [self expandQuery:@"SELECT * FROM \"$T\""]
-                )
-                withArgumentsInArray:argsArray
-                orDictionary:nil
-                orVAList:args
-            ];
-            if (! s) [self queryFailedInDatabase:db];
-            BOOL stop = NO;
-            while (! stop && [s next]) processResult(s, &stop);
-            [s close];
+            NSString *expandedQuery = query ?
+                [self expandQuery:[@"SELECT * FROM \"$T\" WHERE " stringByAppendingString:query]] :
+                [self expandQuery:@"SELECT * FROM \"$T\""];
+            FMResultSet *s;
+            if (expandedQuery) {
+                    s = [db executeQuery:expandedQuery
+                             withArgumentsInArray:argsArray
+                                     orDictionary:nil
+                                         orVAList:args];
+                if (! s) [self queryFailedInDatabase:db];
+                BOOL stop = NO;
+                while (! stop && [s next]) processResult(s, &stop);
+                [s close];
+            }
         }];
     }
     
@@ -536,13 +545,16 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     va_list *foolTheStaticAnalyzer = &args;
     va_start(args, queryAfterWHERE);
     [g_databaseQueue readDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
-        if (! s) [self queryFailedInDatabase:db];
-        if ([s next]) {
-            NSNumber *value = [s objectForColumnIndex:0];
-            if (value) count = value.unsignedIntegerValue;
+        NSString *expandedQuery = [self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]];
+        if (expandedQuery) {
+            FMResultSet *s = [db executeQuery:expandedQuery withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+            if (! s) [self queryFailedInDatabase:db];
+            if ([s next]) {
+                NSNumber *value = [s objectForColumnIndex:0];
+                if (value) count = value.unsignedIntegerValue;
+            }
+            [s close];
         }
-        [s close];
     }];
     va_end(args);
     
@@ -553,13 +565,16 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 {
     __block NSUInteger count = 0;
     [g_databaseQueue readDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]] withArgumentsInArray:args orDictionary:nil orVAList:NULL];
-        if (! s) [self queryFailedInDatabase:db];
-        if ([s next]) {
-            NSNumber *value = [s objectForColumnIndex:0];
-            if (value) count = value.unsignedIntegerValue;
+        NSString *expandedQuery = [self expandQuery:[@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE]];
+        if (expandedQuery) {
+            FMResultSet *s = [db executeQuery:expandedQuery withArgumentsInArray:args orDictionary:nil orVAList:NULL];
+            if (! s) [self queryFailedInDatabase:db];
+            if ([s next]) {
+                NSNumber *value = [s objectForColumnIndex:0];
+                if (value) count = value.unsignedIntegerValue;
+            }
+            [s close];
         }
-        [s close];
     }];
     return count;
 }
@@ -573,10 +588,14 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     va_list *foolTheStaticAnalyzer = &args;
     va_start(args, query);
     [g_databaseQueue readDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
-        if (! s) [self queryFailedInDatabase:db];
-        while ([s next]) [columnArray addObject:[s objectForColumnIndex:0]];
-        [s close];
+        NSString *expandedQuery = [self expandQuery:query];
+        if (expandedQuery) {
+            FMResultSet *s = [db executeQuery:expandedQuery withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+            if (! s) [self queryFailedInDatabase:db];
+            while ([s next]) [columnArray addObject:[s objectForColumnIndex:0]];
+            [s close];
+        }
+
     }];
     va_end(args);
     return columnArray;
@@ -588,10 +607,13 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     
     NSMutableArray *columnArray = [NSMutableArray array];
     [g_databaseQueue readDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
-        if (! s) [self queryFailedInDatabase:db];
-        while ([s next]) [columnArray addObject:[s objectForColumnIndex:0]];
-        [s close];
+        NSString *expandedQuery = [self expandQuery:query];
+        if (expandedQuery) {
+            FMResultSet *s = [db executeQuery:expandedQuery withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
+            if (! s) [self queryFailedInDatabase:db];
+            while ([s next]) [columnArray addObject:[s objectForColumnIndex:0]];
+            [s close];
+        }
     }];
     return columnArray;
 }
@@ -605,10 +627,13 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     va_list *foolTheStaticAnalyzer = &args;
     va_start(args, query);
         [g_databaseQueue readDatabase:^(FMDatabase *db) {
-            FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
-            if (! s) [self queryFailedInDatabase:db];
-            while ([s next]) [rows addObject:s.resultDictionary];
-            [s close];
+            NSString *expandedQuery = [self expandQuery:query];
+            if (expandedQuery) {
+                FMResultSet *s = [db executeQuery:expandedQuery withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+                if (! s) [self queryFailedInDatabase:db];
+                while ([s next]) [rows addObject:s.resultDictionary];
+                [s close];
+            }
         }];
     va_end(args);
     return rows;
@@ -620,10 +645,13 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
     NSMutableArray *rows = [NSMutableArray array];
     [g_databaseQueue readDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
-        if (! s) [self queryFailedInDatabase:db];
-        while ([s next]) [rows addObject:s.resultDictionary];
-        [s close];
+        NSString *expandedQuery = [self expandQuery:query];
+        if (expandedQuery) {
+            FMResultSet *s = [db executeQuery:expandedQuery withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
+            if (! s) [self queryFailedInDatabase:db];
+            while ([s next]) [rows addObject:s.resultDictionary];
+            [s close];
+        }
     }];
     return rows;
 }
@@ -637,10 +665,14 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     va_list *foolTheStaticAnalyzer = &args;
     va_start(args, query);
     [g_databaseQueue readDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
-        if (! s) [self queryFailedInDatabase:db];
-        if ([s next]) firstValue = [[s objectForColumnIndex:0] copy];
-        [s close];
+        NSString *expandedQuery = [self expandQuery:query];
+        if (expandedQuery) {
+            FMResultSet *s = [db executeQuery:expandedQuery withArgumentsInArray:nil orDictionary:nil orVAList:*foolTheStaticAnalyzer];
+            if (! s) [self queryFailedInDatabase:db];
+            if ([s next]) firstValue = [[s objectForColumnIndex:0] copy];
+            [s close];
+        }
+
     }];
     va_end(args);
     return firstValue;
@@ -652,10 +684,13 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
     __block id firstValue = nil;
     [g_databaseQueue readDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
-        if (! s) [self queryFailedInDatabase:db];
-        if ([s next]) firstValue = [[s objectForColumnIndex:0] copy];
-        [s close];
+        NSString *expandedQuery = [self expandQuery:query];
+        if (expandedQuery) {
+            FMResultSet *s = [db executeQuery:expandedQuery withArgumentsInArray:arguments orDictionary:nil orVAList:NULL];
+            if (! s) [self queryFailedInDatabase:db];
+            if ([s next]) firstValue = [[s objectForColumnIndex:0] copy];
+            [s close];
+        }
     }];
     return firstValue;
 }
@@ -775,17 +810,20 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block NSDictionary *resultDictionary = nil;
 
     [g_databaseQueue readDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self.class expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], self.primaryKey];
-        if (! s) [self.class queryFailedInDatabase:db];
-        if ([s next]) {
-            // Update from new database values
-            resultDictionary = [s.resultDictionary copy];
-        } else {
-            // This instance no longer exists in database
-            deleted = YES;
-            existsInDatabase = NO;
+        NSString *expandedQuery = [self.class expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"];
+        if (expandedQuery) {
+            FMResultSet *s = [db executeQuery:expandedQuery, self.primaryKey];
+            if (! s) [self.class queryFailedInDatabase:db];
+            if ([s next]) {
+                // Update from new database values
+                resultDictionary = [s.resultDictionary copy];
+            } else {
+                // This instance no longer exists in database
+                deleted = YES;
+                existsInDatabase = NO;
+            }
+            [s close];
         }
-        [s close];
     }];
 
     if (deleted) {
@@ -1041,6 +1079,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         
         __block BOOL success = NO;
         NSString *query = [self.class expandQuery:@"DELETE FROM \"$T\" WHERE \"$PK\" = ?"];
+        if (!query) {
+            return;
+        }
         success = [db executeUpdate:query, [self primaryKey]];
         self._lastSQLiteError = success ? nil : db.lastError;
 
@@ -1095,6 +1136,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 + (NSString *)expandQuery:(NSString *)query
 {
     if (self == FCModel.class) return query;
+    if (!g_primaryKeyFieldName[self]) return nil;
+    
     query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
     return [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
 }
