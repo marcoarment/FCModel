@@ -1136,9 +1136,10 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 + (NSString *)expandQuery:(NSString *)query
 {
     if (self == FCModel.class) return query;
-    if (!g_primaryKeyFieldName[self]) return nil;
+    NSString *primaryKeyFieldName = g_primaryKeyFieldName[self];
+    if (!primaryKeyFieldName) return nil;
     
-    query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
+    query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:primaryKeyFieldName];
     return [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
 }
 
