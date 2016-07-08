@@ -1,5 +1,5 @@
-FCModel
-=======
+FCModel 2
+=========
 
 An alternative to Core Data for people who like having direct SQL access.
 
@@ -7,11 +7,9 @@ By [Marco Arment](http://www.marco.org/). See the LICENSE file for license info 
 
 FCModel is a generic model layer on top of SQLite. It's intended for people who want some of Core Data's convenience, but with more control over implementation, performance, database schemas, queries, indexes, and migrations, and the ability to use raw SQL queries and SQLite features directly.
 
-FCModel accomplishes a lot of what [Brent Simmons wrote about](http://www.objc.io/issue-4/SQLite-instead-of-core-data.html). This is my version of that. (Are you reading [objc.io](http://www.objc.io) yet? You should be. It's excellent.)
-
 ## Beta status
 
-This is a __beta.__ I'm building [an app](http://overcast.fm/) around it, a few others are using it and making contributions, and it's stable for us so far. But changes are still relatively frequent, and the API may still change in minor but backward-incompatible ways.
+This is a __beta.__ I use it in [Overcast](http://overcast.fm/), a few others are using it and making contributions, and it's stable for us so far. But the API may still change in minor but backward-incompatible ways.
 
 ## Requirements
 
@@ -23,7 +21,7 @@ This is a __beta.__ I'm building [an app](http://overcast.fm/) around it, a few 
 
 ## Documentation
 
-There isn't much right now. Check out the `FCModel.h` header and the example project. I'll add more here as I get the chance.
+There isn't much. Check out the `FCModel.h` header and the example project.
 
 ## Schema-to-object mapping
 
@@ -62,20 +60,12 @@ Database-mapped object properties can be:
 * Primitives (`int`, `double`, `BOOL`, `int64_t`, etc.) or `NSNumber`, limited to [SQLite's precision](http://www.sqlite.org/datatype3.html) (64-bit signed for integers).
 * `NSString`, which is always stored and loaded as UTF-8
 * `NSData` for `BLOB` columns
-* `NSDate`, which is converted to/from `NSTimeInterval` since 1970 (signed `double` versions of Unix timestamps) for storage. Declare `NSDate` columns as `REAL` in the table.
-* `NSURL`, which is converted to/from its `absoluteString` representation for storage.
-* `NSDictionary` or `NSArray`, which are converted to/from binary plists for storage (so each contained object must be an `NSData`, `NSString`, `NSArray`, `NSDictionary`, `NSDate`, or `NSNumber`).
 
-To override this behavior or customize it for other types, models may override the methods below. Database values may be `NSString` or `NSNumber` for `INTEGER`/`FLOAT`/`TEXT` columns, or `NSData` for `BLOB` columns. For columns that permit `NULL`, these methods may receive or return `nil`. Overrides must call the `super` implementation to convert values that they're not handling.
-
-```obj-c
-- (id)serializedDatabaseRepresentationOfValue:(id)instanceValue forPropertyNamed:(NSString *)propertyName;
-- (id)unserializedRepresentationOfDatabaseValue:(id)databaseValue forPropertyNamed:(NSString *)propertyName;
-```
+Database values may be `NSString` or `NSNumber` for `INTEGER`/`FLOAT`/`TEXT` columns, or `NSData` for `BLOB` columns. For columns that permit `NULL`, these methods may receive or return `nil`.
 
 You can name your column-property ivars whatever you like. FCModel associates columns with property names, not ivar names.
 
-Models may have properties that have no corresponding database columns. But if any columns in a model's table don't have corresponding properties, FCModel logs a notice to the console at launch.
+Models may have properties that have no corresponding database columns. But if any columns in a model's table don't have corresponding properties and aren't returned by the subclass' `ignoredFieldNames` method, FCModel logs a notice to the console at launch.
 
 ## Schema creation and migrations
 
@@ -141,6 +131,8 @@ Once you've shipped a version to customers, never change its construction in you
 
 ## Creating, fetching, and updating model instances
 
+All changes to model instances should be done within a `save:` block, which will be executed synchronously on the main thread.
+
 Creating new instances (INSERTs):
 
 ```obj-c
@@ -148,9 +140,11 @@ Creating new instances (INSERTs):
 Person *bob = [Person new];
 // If you want to specify your own .id value:
 Person *bob = [Person instanceWithPrimaryKey:@123];
-bob.name = @"Bob";
-bob.createdTime = [NSDate date];
-[bob save];
+
+[bob save:^{
+    bob.name = @"Bob";
+    bob.createdTime = [NSDate date];
+}];
 ```
 
 SELECT and UPDATE queries should look familiar to FMDB fans: everything's parameterized with `?` placeholders and varargs query functions, and it's passed right through to FMDB. Just as with FMDB, you need to box primitives when passing them as query params, e.g. `@1` instead of `1`.
@@ -158,8 +152,9 @@ SELECT and UPDATE queries should look familiar to FMDB fans: everything's parame
 ```obj-c
 // Find that specific Bob by ID
 Person *bob = [Person instanceWithPrimaryKey:@123];
-bob.name = @"Robert";
-[bob save];
+[bob save:^{
+    bob.name = @"Robert";
+}];
 
 // Or find the first person named Bob
 Person *firstBob = [Person firstInstanceWhere:@"name = ? ORDER BY id LIMIT 1", @"Bob"];
@@ -173,7 +168,7 @@ You can use two shortcuts in queries:
 * `$T`: The model's table name. (e.g. "Person")
 * `$PK`: The model's primary-key column name. (e.g. "id")
 
-Now here's where it gets crazy. Suppose you wanted to rename all Bobs to Robert, or delete all people named Sue, without loading them all and doing a million queries. (Hi, Core Data.)
+Suppose you wanted to rename all Bobs to Robert, or delete all people named Sue, without loading them all and doing a million queries.
 
 ```obj-c
 // Suppose these are hanging out here, being retained somewhere (in the UI, maybe)
@@ -192,17 +187,15 @@ NSLog(@"Sue is %@.", sue.deleted ? @"deleted" : @"around");
 // prints: Sue is deleted.
 ```
 
-It works. (Or at least, it should. Please let me know if it doesn't.)
-
 ## Object-to-object relationships
 
 FCModel is not designed to handle this automatically. You're meant to write this from each model's implementation as appropriate. This gives you complete control over schema, index usage, automatic fetching queries (or not), and caching.
 
-If you want automatic relationship mappings, consider using Core Data. It's very good at that.
+If you want automatic relationship mappings, consider using Core Data. It's the right tool for that job, and FCModel isn't.
 
 ## Retention and Caching
 
-Each FCModel instance is exclusive in memory by its table and primary-key value. If you load Person ID 1, then some other query loads Person ID 1, they'll be the same instance (unless the first one got deallocated in the meantime).
+Each FCModel instance is unique in memory by its table and primary-key value. If you load Person ID 1, then some other query loads Person ID 1, they'll be the same instance (unless the first one got deallocated in the meantime).
 
 FCModels are safe to retain for a while, even by the UI. You can use KVO to observe changes. Just check instances' `deleted` property where relevant, and watch for change notifications.
 
@@ -220,16 +213,16 @@ Person *bob = [Person instanceWithPrimaryKey:@123];
 
 ## Concurrency
 
-FCModels can be accessed and modified from any thread (again, as far as I know), but all database operations are run synchronously on a serial queue, so you're not likely to see any performance gains by concurrent access.
+FCModels can be used from any thread, but all database reads and writes are serialized onto the main thread, so you're not likely to see any performance gains by concurrent access.
 
-FCModel's public notifications (`FCModelInsertNotification`, etc.) are always posted on the main thread.
+FCModel's notifications are always posted on the main thread.
 
 ## Support
 
-For now, it's just right here on GitHub.
+None, officially, but I'm happy to answer questions here on GitHub when time permits.
 
 ## Contributions
 
-...are welcome, with the following guideline:
+...are welcome for consideration, with the following guideline:
 
 More than anything else, I'd like to keep FCModel _small,_ simple, and easy to fit in your mental L2 cache.

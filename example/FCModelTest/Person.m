@@ -10,17 +10,14 @@
 
 @implementation Person
 
-- (BOOL)shouldInsert
-{
-    self.createdTime = [NSDate date];
-    self.modifiedTime = self.createdTime;
-    return YES;
-}
 
-- (BOOL)shouldUpdate
+- (BOOL)save:(void (^)())modificiationsBlock
 {
-    self.modifiedTime = [NSDate date];
-    return YES;
+    return [super save:^{
+        if (self.hasUnsavedChanges) self.modifiedTime = [NSDate date];
+        if (! self.existsInDatabase) self.createdTime = [NSDate date];
+        modificiationsBlock();
+    }];
 }
 
 - (Color *)color

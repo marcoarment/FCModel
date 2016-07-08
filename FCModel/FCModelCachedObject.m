@@ -8,9 +8,13 @@
 #import "FCModelCachedObject.h"
 #import "FCModel.h"
 
+#if TARGET_OS_IPHONE
+#import <UIKit/UIKit.h>
+#endif
+
 // FCModelCachedObject has its own notification that runs BEFORE the other FCModel change notifications
 //  so it can remove stale data before any application actions fetch new data in response to the change.
-extern NSString * const FCModelWillSendAnyChangeNotification;
+extern NSString * const FCModelWillSendChangeNotification;
 
 #pragma mark - Global cache
 
@@ -123,8 +127,7 @@ extern NSString * const FCModelWillSendAnyChangeNotification;
         obj.generator = generatorBlock;
         obj.ignoredFieldsForInvalidation = ignoredFields;
 
-        [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(dataSourceChanged:) name:FCModelWillReloadNotification object:fcModelClass];
-        [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(dataSourceChanged:) name:FCModelWillSendAnyChangeNotification object:fcModelClass];
+        [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(dataSourceChanged:) name:FCModelWillSendChangeNotification object:fcModelClass];
 
 #if TARGET_OS_IPHONE
         [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(flush:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];

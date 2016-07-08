@@ -25,9 +25,9 @@
     // New DB on every launch for testing (comment out for persistence testing)
     [NSFileManager.defaultManager removeItemAtPath:dbPath error:NULL];
     
-    [FCModel openDatabaseAtPath:dbPath withSchemaBuilder:^(FMDatabase *db, int *schemaVersion) {
+    [FCModel openDatabaseAtPath:dbPath withDatabaseInitializer:NULL schemaBuilder:^(FMDatabase *db, int *schemaVersion) {
         [db setCrashOnErrors:YES];
-        db.traceExecution = YES; // Log every query (useful to learn what FCModel is doing or analyze performance)
+//        db.traceExecution = YES; // Log every query (useful to learn what FCModel is doing or analyze performance)
         [db beginTransaction];
         
         void (^failedAt)(int statement) = ^(int statement){
@@ -40,7 +40,7 @@
         if (*schemaVersion < 1) {
             if (! [db executeUpdate:
                 @"CREATE TABLE Person ("
-                @"    id           INTEGER PRIMARY KEY AUTOINCREMENT," // Autoincrement is optional. Just demonstrating that it works.
+                @"    id           INTEGER PRIMARY KEY,"
                 @"    name         TEXT NOT NULL DEFAULT '',"
                 @"    colorName    TEXT NOT NULL,"
                 @"    taps         INTEGER NOT NULL DEFAULT 0,"
@@ -96,8 +96,9 @@
         @"gray2" : @"C6C6CC",
     } enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSString *hex, BOOL *stop) {
         Color *c = [Color instanceWithPrimaryKey:name];
-        c.hex = hex;
-        [c save];
+        [c save:^{
+            c.hex = hex;
+        }];
     }];
     
     Color *testUniqueRed1 = [Color instanceWithPrimaryKey:@"red"];
@@ -116,22 +117,26 @@
     NSMutableSet *colorsUsedAlready = [NSMutableSet set];
     
     // Put some data in the table if there's not enough
-    int numPeople = [[Person firstValueFromQuery:@"SELECT COUNT(*) FROM $T"] intValue];
+    NSUInteger numPeople = [Person numberOfInstances];
     while (numPeople < 26) {
         Person *p = [Person new];
-        p.name = [RandomThings randomName];
-        
-        if (colorsUsedAlready.count >= allColors.count) [colorsUsedAlready removeAllObjects];
-        
-        Color *color;
-        do {
-            color = (Color *) allColors[([RandomThings randomUInt32] % allColors.count)];
-        } while ([colorsUsedAlready member:color] && colorsUsedAlready.count < allColors.count);
+        [p save:^{
+            do {
+                p.name = [RandomThings randomName];
+            } while ([Person firstInstanceWhere:@"name = ?" arguments:@[p.name]]);
 
-        [colorsUsedAlready addObject:color];
-        p.color = color;
+            if (colorsUsedAlready.count >= allColors.count) [colorsUsedAlready removeAllObjects];
+            
+            Color *color;
+            do {
+                color = (Color *) allColors[([RandomThings randomUInt32] % allColors.count)];
+            } while ([colorsUsedAlready member:color] && colorsUsedAlready.count < allColors.count);
+
+            [colorsUsedAlready addObject:color];
+            p.color = color;
+        }];
         
-        if ([p save]) numPeople++;
+        numPeople++;
     }
     
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
