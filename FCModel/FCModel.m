@@ -113,6 +113,14 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return outArray ?: @[];
 }
 
++ (void)cleanAllLoadedInstances
+{
+    fcm_onMainThread(^{
+        if (self.class == FCModel.class) [g_instances removeAllObjects];
+        else [g_instances removeObjectForKey:self];
+    });
+}
+
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue { return [self instanceWithPrimaryKey:primaryKeyValue databaseRowValues:nil createIfNonexistent:YES]; }
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create { return [self instanceWithPrimaryKey:primaryKeyValue databaseRowValues:nil createIfNonexistent:create]; }
 
