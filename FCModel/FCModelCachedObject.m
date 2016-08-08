@@ -46,7 +46,7 @@ extern NSString * const FCModelWillSendChangeNotification;
     if ( (self = [super init]) ) {
         self.cacheQueue = dispatch_queue_create("FCModelGeneratedObjectCache", NULL);
         self.cache = [NSMutableDictionary dictionary];
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && ! TARGET_OS_WATCH
         [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(clear:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
 #endif
     }
@@ -129,7 +129,7 @@ extern NSString * const FCModelWillSendChangeNotification;
 
         [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(dataSourceChanged:) name:FCModelWillSendChangeNotification object:fcModelClass];
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && ! TARGET_OS_WATCH
         [NSNotificationCenter.defaultCenter addObserver:obj selector:@selector(flush:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
 #endif
 
