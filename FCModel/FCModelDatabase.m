@@ -14,7 +14,10 @@
 + (void)dataChangedExternally;
 @end
 
-@interface FCModelDatabase ()
+@interface FCModelDatabase () {
+    uint32_t changeCounterBeforeBlock; // ivar instead of local so nested inDatabase calls work without mistakenly invoking dataChangedExternally
+}
+
 - (uint32_t)sqliteChangeCount;
 - (BOOL)sqliteChangeTrackingIsActive;
 @property (nonatomic) int32_t expectedChangeCount;
@@ -133,7 +136,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     
     FMDatabase *db = self.database;
     BOOL hadOpenResultSetsBefore = db.hasOpenResultSets;
-    uint32_t changeCounterBeforeBlock = [self sqliteChangeCount];
+    changeCounterBeforeBlock = [self sqliteChangeCount];
 
     block(db);
 
