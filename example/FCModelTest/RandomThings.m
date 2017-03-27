@@ -141,7 +141,10 @@
 + (uint32_t)randomUInt32
 {
     uint8_t randomBytes[4];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused"
     SecRandomCopyBytes(kSecRandomDefault, 4, randomBytes); // gotta have priorities. I'm not going to put an insecure RNG in my throwaway random-stuff class.
+#pragma clang diagnostic pop
     return (uint32_t) *randomBytes;
 }
 

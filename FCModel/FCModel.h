@@ -9,7 +9,7 @@
 #include <AvailabilityMacros.h>
 
 #ifdef COCOAPODS
-#import <FMDB/FMDatabase.h>
+#import <fmdb/FMDatabase.h>
 #else
 #import "FMDatabase.h"
 #endif
