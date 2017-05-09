@@ -41,6 +41,55 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     else dispatch_async(dispatch_get_main_queue(), ^{ [class postChangeNotificationWithChangedFields:nil]; });
 }
 
+// This ridiculously convoluted approach to dynamically call UIApplication.beginBackgroundTask...
+//  is to enable compiling this with iOS apps AND extensions without requiring apps to custom-#define
+//  "is extension"/"is main app" preprocessor macros in their build configs.
+//
+// Performing DB queries within background tasks is now required under iOS 10.x to prevent the app from
+//  being suspended mid-query, which will cause Springboard to kill the app with crashlog code 0xdeadl0cc.
+//
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
+static void wrapInBackgroundTask(void (^block)())
+{
+    static dispatch_once_t onceToken;
+    static Class UIApplicationClass;
+    static id application;
+    static NSMethodSignature *beginTaskSignature, *endTaskSignature;
+    static SEL beginTaskSEL;
+    static SEL endTaskSEL;
+    dispatch_once(&onceToken, ^{
+        beginTaskSEL = @selector(beginBackgroundTaskWithExpirationHandler:);
+        endTaskSEL = @selector(endBackgroundTask:);
+        UIApplicationClass = NSClassFromString(@"UIApplication");
+        application = UIApplicationClass ? [UIApplicationClass performSelector:@selector(sharedApplication)]: nil;
+        beginTaskSignature = application ? [application methodSignatureForSelector:beginTaskSEL] : nil;
+        endTaskSignature = application ? [application methodSignatureForSelector:endTaskSEL] : nil;
+    });
+    
+    if (application) {
+        __block NSUInteger backgroundTaskID = 0;
+        void (^endTaskBlock)() = ^{
+            backgroundTaskID = 0;
+            NSInvocation *endInvocation = [NSInvocation invocationWithMethodSignature:endTaskSignature];
+            endInvocation.selector = endTaskSEL;
+            [endInvocation setArgument:&backgroundTaskID atIndex:2];
+            [endInvocation invokeWithTarget:application];
+        };
+
+        NSInvocation *beginInvocation = [NSInvocation invocationWithMethodSignature:beginTaskSignature];
+        beginInvocation.selector = beginTaskSEL;
+        [beginInvocation setArgument:&endTaskBlock atIndex:2];
+        [beginInvocation invokeWithTarget:application];
+        [beginInvocation getReturnValue:&backgroundTaskID];
+        block();
+        if (backgroundTaskID) endTaskBlock();
+    } else {
+        block();
+    }
+}
+#pragma clang diagnostic pop
+
 @interface FCModelDatabase () {
     int changeCounterReadFileDescriptor;
     int dispatchEventFileDescriptor;
@@ -66,12 +115,14 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 - (FMDatabase *)database
 {
     if (! _openDatabase) fcm_onMainThread(^{
-        self.openDatabase = [[FMDatabase alloc] initWithPath:_path];
-        if (! [_openDatabase open]) {
-            [[NSException exceptionWithName:NSGenericException reason:[NSString stringWithFormat:@"Cannot open or create database at path: %@", self.path] userInfo:nil] raise];
-        }
+        wrapInBackgroundTask(^{
+            self.openDatabase = [[FMDatabase alloc] initWithPath:_path];
+            if (! [_openDatabase open]) {
+                [[NSException exceptionWithName:NSGenericException reason:[NSString stringWithFormat:@"Cannot open or create database at path: %@", self.path] userInfo:nil] raise];
+            }
 
-        sqlite3_update_hook(_openDatabase.sqliteHandle, &_sqlite3_update_hook, (__bridge void *) self);
+            sqlite3_update_hook(_openDatabase.sqliteHandle, &_sqlite3_update_hook, (__bridge void *) self);
+        });
     });
     return _openDatabase;
 }
@@ -119,14 +170,13 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     changeCounterReadFileDescriptor = 0;
     dispatch_source_cancel(dispatchFileWriteSource);
     dispatchFileWriteSource = NULL;
-
-    [self.openDatabase close];
+    wrapInBackgroundTask(^{ [self.openDatabase close]; });
     self.openDatabase = nil;
 }
 
 - (void)dealloc
 {
-    [_openDatabase close];
+    wrapInBackgroundTask(^{ [_openDatabase close]; });
     self.openDatabase = nil;
 }
 
@@ -134,21 +184,23 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 {
     NSParameterAssert(NSThread.isMainThread);
     
-    FMDatabase *db = self.database;
-    BOOL hadOpenResultSetsBefore = db.hasOpenResultSets;
-    changeCounterBeforeBlock = [self sqliteChangeCount];
+    wrapInBackgroundTask(^{
+        FMDatabase *db = self.database;
+        BOOL hadOpenResultSetsBefore = db.hasOpenResultSets;
+        changeCounterBeforeBlock = [self sqliteChangeCount];
 
-    block(db);
+        block(db);
 
-    if (changeCounterReadFileDescriptor) {
-        // if more than 1 change during this expected write, either there's 2 queries in it (unexpected) or another process changed it
-        uint32_t changeCounterAfterBlock = [self sqliteChangeCount];
-        if (changeCounterAfterBlock - changeCounterBeforeBlock > 1) [FCModel dataChangedExternally];
-    }
+        if (changeCounterReadFileDescriptor) {
+            // if more than 1 change during this expected write, either there's 2 queries in it (unexpected) or another process changed it
+            uint32_t changeCounterAfterBlock = [self sqliteChangeCount];
+            if (changeCounterAfterBlock - changeCounterBeforeBlock > 1) [FCModel dataChangedExternally];
+        }
 
-    if (db.hasOpenResultSets != hadOpenResultSetsBefore) {
-        [[NSException exceptionWithName:NSGenericException reason:@"FCModelDatabase has an open FMResultSet after inDatabase:" userInfo:nil] raise];
-    }
+        if (db.hasOpenResultSets != hadOpenResultSetsBefore) {
+            [[NSException exceptionWithName:NSGenericException reason:@"FCModelDatabase has an open FMResultSet after inDatabase:" userInfo:nil] raise];
+        }
+    });
 }
 
 @end
