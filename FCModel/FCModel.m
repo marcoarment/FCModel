@@ -1025,16 +1025,20 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)dataChangedExternally
 {
-    fcm_onMainThread(^{
-        [g_fieldInfo enumerateKeysAndObjectsUsingBlock:^(Class modelClass, id obj, BOOL *stop) {
-            NSMapTable *classCache = g_instances[modelClass];
-            if (classCache) {
-                for (FCModel *m in classCache.objectEnumerator.allObjects) [m reload];
-            }
+    [NSProcessInfo.processInfo performExpiringActivityWithReason:@"FCModel dataChangedExternally" usingBlock:^(BOOL expired) {
+        if (expired) return;
         
-            [modelClass postChangeNotificationWithChangedFields:nil];
-        }];
-    });
+        fcm_onMainThread(^{
+            [g_fieldInfo enumerateKeysAndObjectsUsingBlock:^(Class modelClass, id obj, BOOL *stop) {
+                NSMapTable *classCache = g_instances[modelClass];
+                if (classCache) {
+                    for (FCModel *m in classCache.objectEnumerator.allObjects) [m reload];
+                }
+            
+                [modelClass postChangeNotificationWithChangedFields:nil];
+            }];
+        });
+    }];
 }
 
 @end
