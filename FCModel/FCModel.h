@@ -141,7 +141,7 @@ extern NSString * const FCModelChangedFieldsKey;
 //  Both return YES if the transaction succeeded. May return NO if, for instance, the instance gets deleted beforehand.
 //
 - (BOOL)reload;
-- (BOOL)save:(void (^)())modificiationsBlock;
+- (BOOL)save:(void (^)(void))modificiationsBlock;
 
 // Notification shortcuts: call on an FCModel subclass to be notified for only changes to certain fields
 + (void)addObserver:(id)target selector:(SEL)action forChangedFields:(NSSet *)fieldNamesToWatch;
@@ -165,7 +165,7 @@ extern NSString * const FCModelChangedFieldsKey;
 //  - Enqueue and coalesce change notifications until commit (and are discarded if the transaction is rolled back)
 //  - Do not automatically "revert" changed model instances in memory after rolled-back value changes
 //
-+ (void)performTransaction:(BOOL (^)())block; // return YES to commit, NO to roll back
++ (void)performTransaction:(BOOL (^)(void))block; // return YES to commit, NO to roll back
 + (BOOL)isInTransaction;
 
 // Field info: You probably won't need this most of the time, but it's nice to have sometimes. FCModel's generating this privately
@@ -220,7 +220,7 @@ typedef NS_ENUM(NSInteger, FCModelFieldType) {
 
 // Utility function used throughout FCModel:
 // If we're currently on the main thread, run block() sync, otherwise dispatch block() sync to main thread.
-inline __attribute__((always_inline)) void fcm_onMainThread(void (^block)())
+inline __attribute__((always_inline)) void fcm_onMainThread(void (^block)(void))
 {
     if (block) {
         if (NSThread.isMainThread) block(); else dispatch_sync(dispatch_get_main_queue(), block);

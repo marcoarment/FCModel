@@ -178,7 +178,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return success;
 }
 
-- (BOOL)save:(void (^)())modificiationsBlock
+- (BOOL)save:(void (^)(void))modificiationsBlock
 {
     __block BOOL success = NO;
     fcm_onMainThread(^{
@@ -427,7 +427,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         NSMutableString *whereClause = [NSMutableString stringWithFormat:@"%@ IN (", g_primaryKeyFieldName[self]];
         NSUInteger whereClauseLength = whereClause.length;
         
-        void (^fetchChunk)() = ^{
+        void (^fetchChunk)(void) = ^{
             if (valuesArray.count == 0) return;
             [whereClause appendString:@")"];
             NSArray *newInstancesThisChunk = [self _instancesWhere:whereClause argsArray:valuesArray orVAList:NULL onlyFirst:NO];
@@ -965,7 +965,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return inTransaction;
 }
 
-+ (void)performTransaction:(BOOL (^)())block
++ (void)performTransaction:(BOOL (^)(void))block
 {
     __block NSDictionary *changedFieldsToNotify = nil;
 
