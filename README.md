@@ -132,7 +132,6 @@ NSString *dbPath = [documentsPath stringByAppendingPathComponent:@"testDB.sqlite
 If you're using swift the class name is AppName.ClassName so instead of Person the table needs to be called Overcast.Person. Please note that . is used as a separator so you need to enclose it in ". Example:
 
 ```swift
-  static func createDatabase() {
     let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
     let dbPath = documentsPath.stringByAppendingPathComponent("prod.sqlite3")
     FCModel.openDatabase(atPath: dbPath) { (database, schemaVersion) in
@@ -153,7 +152,7 @@ If you're using swift the class name is AppName.ClassName so instead of Person t
       if (schemaVersion?.pointee ?? 0 < Int32(1)) {
         if (database?.executeStatements(
         """
-        CREATE TABLE "Overcast.Person" (
+        CREATE TABLE \"Overcast.Person\" (
                       id           INTEGER PRIMARY KEY,
                       name        TEXT NOT NULL DEFAULT '',
                       time  REAL NOT NULL,
@@ -192,7 +191,6 @@ If you're using swift the class name is AppName.ClassName so instead of Person t
         database?.commit()
         
       }
-  }
 ```
 
 
