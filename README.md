@@ -127,6 +127,76 @@ NSString *dbPath = [documentsPath stringByAppendingPathComponent:@"testDB.sqlite
 }];
 ```
 
+#### Swift Caveats
+
+If you're using swift the class name is AppName.ClassName so instead of Person the table needs to be called Overcast.Person. Please note that . is used as a separator so you need to enclose it in ". Example:
+
+```swift
+  static func createDatabase() {
+    let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+    let dbPath = documentsPath.stringByAppendingPathComponent("prod.sqlite3")
+    FCModel.openDatabase(atPath: dbPath) { (database, schemaVersion) in
+      database?.beginTransaction()
+      
+      func failedAt(statement: Int, database: FMDatabase?) {
+        database?.rollback()
+        guard let lastErrorCode = database?.lastErrorCode, let lastErrorMessage = database?.lastErrorMessage else {
+          log.error("no db")
+          return
+        }
+        
+        let errorMessage = "Migration statement \(statement) failed, code \(lastErrorCode): \(lastErrorMessage)"
+        log.error(errorMessage)
+        assertionFailure(errorMessage)
+      }
+      
+      if (schemaVersion?.pointee ?? 0 < Int32(1)) {
+        if (database?.executeStatements(
+        """
+        CREATE TABLE "Overcast.Person" (
+                      id           INTEGER PRIMARY KEY,
+                      name        TEXT NOT NULL DEFAULT '',
+                      time  REAL NOT NULL,
+                  );
+        """
+          ) ?? false) {
+          //success
+        } else {
+          failedAt(statement: 1, database: database)
+        }
+        
+        if (database?.executeStatements("CREATE INDEX IF NOT EXISTS applicationName ON \"Overcast.Person\" (applicationName);") ?? false) {
+          //success
+        } else {
+          failedAt(statement: 2, database: database)
+        }
+        
+        schemaVersion?.pointee = 1
+      }
+        
+        // If you wanted to change the schema in a later app version, you'd add something like this here:
+        /*
+         if (*schemaVersion < 2) {
+         if (! [db executeUpdate:@"ALTER TABLE Person ADD COLUMN title TEXT NOT NULL DEFAULT ''"]) failedAt(3);
+         *schemaVersion = 2;
+         }
+         
+         // And so on...
+         if (*schemaVersion < 3) {
+         if (! [db executeUpdate:@"CREATE TABLE..."]) failedAt(4);
+         *schemaVersion = 3;
+         }
+         
+         */
+        
+        database?.commit()
+        
+      }
+  }
+```
+
+
+
 Once you've shipped a version to customers, never change its construction in your code. That way, on an initial launch of a new version, your schema-builder will see that the customer's existing database is at e.g. schema version 2, and you can execute only what's required to bring it up to version 3.
 
 ## Creating, fetching, and updating model instances
