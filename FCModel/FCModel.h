@@ -198,6 +198,10 @@ extern NSString * const FCModelChangedFieldsKey;
 // Provide a custom handler for any SQLite errors when performing queries. If unspecified or NULL, proposedException is raised on errors.
 + (void)setQueryFailedHandler:(void (^)(NSException *proposedException, int dbErrorCode, NSString *dbErrorMessage))handler;
 
+
+//EDIT
++ (NSDictionary*) executeRawQuery:(NSString*) query;
+//END EDIT
 @end
 
 

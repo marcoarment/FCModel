@@ -1037,4 +1037,19 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     });
 }
 
+//EDIT
++ (NSDictionary*) executeRawQuery:(NSString*) query
+{
+  
+  __block NSDictionary *model = NULL;
+  [g_database inDatabase:^(FMDatabase *db) {
+    FMResultSet *s = [db executeQuery: query];
+    if (! s) [self queryFailedInDatabase:db];
+    model = [s resultDictionary];
+    [s close];
+  }];
+  
+  return model;
+}
+//END EDIT
 @end
