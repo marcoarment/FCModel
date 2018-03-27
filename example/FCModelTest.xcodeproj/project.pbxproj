@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		49B84BD219A5D8850070B159 /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFB1A17E4D2830066C5EA /* libsqlite3.dylib */; };
-		762CE7F4206ACE2F002FC62B /* FCModel+ExecuteRawQuery.m in Sources */ = {isa = PBXBuildFile; fileRef = 762CE7F2206ACE2F002FC62B /* FCModel+ExecuteRawQuery.m */; };
 		9230D6FB17F32EF1000C9C87 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9230D6FA17F32EF1000C9C87 /* XCTest.framework */; };
 		9230D6FC17F32EF1000C9C87 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC217E4C8EE0066C5EA /* Foundation.framework */; };
 		9230D6FD17F32EF1000C9C87 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9EEFAC617E4C8EE0066C5EA /* UIKit.framework */; };
@@ -54,8 +53,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		762CE7F2206ACE2F002FC62B /* FCModel+ExecuteRawQuery.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "FCModel+ExecuteRawQuery.m"; sourceTree = "<group>"; };
-		762CE7F3206ACE2F002FC62B /* FCModel+ExecuteRawQuery.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "FCModel+ExecuteRawQuery.h"; sourceTree = "<group>"; };
 		9230D6F917F32EF1000C9C87 /* FCModelTest Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "FCModelTest Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9230D6FA17F32EF1000C9C87 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		9230D70017F32EF1000C9C87 /* FCModelTest Tests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "FCModelTest Tests-Info.plist"; sourceTree = "<group>"; };
@@ -231,8 +228,6 @@
 			children = (
 				A9EEFAFB17E4CB300066C5EA /* FCModel.h */,
 				A9EEFAFC17E4CB300066C5EA /* FCModel.m */,
-				762CE7F3206ACE2F002FC62B /* FCModel+ExecuteRawQuery.h */,
-				762CE7F2206ACE2F002FC62B /* FCModel+ExecuteRawQuery.m */,
 				A99BF34D1B50B14100C4559A /* FCModelDatabase.h */,
 				A99BF34E1B50B14100C4559A /* FCModelDatabase.m */,
 				A924EA2D18D0EC94000C28BD /* FCModelCachedObject.h */,
@@ -383,7 +378,6 @@
 				A9EEFB2817E6AF970066C5EA /* Color.m in Sources */,
 				A9EEFB2C17E6BCF80066C5EA /* FMDatabasePool.m in Sources */,
 				A9EEFB2117E4E39A0066C5EA /* RandomThings.m in Sources */,
-				762CE7F4206ACE2F002FC62B /* FCModel+ExecuteRawQuery.m in Sources */,
 				A924EA3118D0EC94000C28BD /* FCModelCachedObject.m in Sources */,
 				A9EEFADC17E4C8EE0066C5EA /* ViewController.m in Sources */,
 				A9EEFAD317E4C8EE0066C5EA /* AppDelegate.m in Sources */,
