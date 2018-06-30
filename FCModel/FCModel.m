@@ -20,7 +20,8 @@ NSString * const FCModelException = @"FCModelException";
 NSString * const FCModelChangeNotification = @"FCModelChangeNotification";
 NSString * const FCModelInstanceKey = @"FCModelInstanceKey";
 NSString * const FCModelChangedFieldsKey = @"FCModelChangedFieldsKey";
-
+NSString * const FCModelChangeTypeKey = @"FCModelChangeTypeKey";
+NSString * const FCModelOldFieldValuesKey = @"FCModelOldFieldValuesKey";
 NSString * const FCModelWillSendChangeNotification = @"FCModelWillSendChangeNotification"; // for FCModelCachedObject
 
 static NSMutableDictionary *g_instances = NULL;
@@ -41,7 +42,7 @@ typedef NS_ENUM(char, FCModelInDatabaseStatus) {
     FCModelInDatabaseStatus _inDatabaseStatus;
 }
 @property (nonatomic, copy) NSDictionary *_rowValuesInDatabase;
-+ (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields;
++ (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields changedObject:(FCModel *)changedObject changeType:(FCModelChangeType)changeType priorFieldValues:(NSDictionary *)priorFieldValues;
 @end
 
 static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
@@ -575,6 +576,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
     __block BOOL hadChanges = NO;
     __block NSSet *changedFields;
+    __block FCModelChangeType changeType = FCModelChangeTypeUnspecified;
+    __block NSDictionary *previousRowValuesInDatabase = nil;
     fcm_onMainThread(^{
         [g_database inDatabase:^(FMDatabase *db) {
         
@@ -594,11 +597,13 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             if (update) {
                 columnNames = [changes allKeys];
                 changedFields = [NSSet setWithArray:columnNames];
+                changeType = FCModelChangeTypeUpdate;
             } else {
                 changedFields = [NSSet setWithArray:self.class.databaseFieldNames];
                 NSMutableSet *columnNamesMinusPK = [[NSSet setWithArray:[g_fieldInfo[self.class] allKeys]] mutableCopy];
                 [columnNamesMinusPK removeObject:pkName];
                 columnNames = [columnNamesMinusPK allObjects];
+                changeType = FCModelChangeTypeInsert;
             }
 
             // Validate NOT NULL columns
@@ -649,8 +654,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             g_database.isInInternalWrite = NO;
             if (! success) [self.class queryFailedInDatabase:db];
             
-            NSDictionary *rowValuesInDatabase = self._rowValuesInDatabase;
-            NSMutableDictionary *newRowValues = rowValuesInDatabase ? [rowValuesInDatabase mutableCopy] : [NSMutableDictionary dictionary];
+            previousRowValuesInDatabase = self._rowValuesInDatabase;
+            NSMutableDictionary *newRowValues = previousRowValuesInDatabase ? [previousRowValuesInDatabase mutableCopy] : [NSMutableDictionary dictionary];
             [changes enumerateKeysAndObjectsUsingBlock:^(NSString *fieldName, id obj, BOOL *stop) {
                 newRowValues[fieldName] = obj ?: NSNull.null;
             }];
@@ -660,7 +665,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             hadChanges = YES;
         }];
         
-        if (hadChanges) [self.class postChangeNotificationWithChangedFields:changedFields];
+        if (hadChanges) [self.class postChangeNotificationWithChangedFields:changedFields changedObject:self changeType:changeType priorFieldValues:previousRowValuesInDatabase];
     });
     return hadChanges;
 }
@@ -687,7 +692,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     
         [g_instances[self.class] removeObjectForKey:pkValue];
 
-        [self.class postChangeNotificationWithChangedFields:nil];
+        [self.class postChangeNotificationWithChangedFields:nil changedObject:self changeType:FCModelChangeTypeDelete priorFieldValues:nil];
     });
 }
 
@@ -1006,7 +1011,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return success;
 }
 
-+ (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields
++ (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields changedObject:(FCModel *)changedObject changeType:(FCModelChangeType)changeType priorFieldValues:(NSDictionary *)priorFieldValues
 {
     if (! changedFields) changedFields = [NSSet setWithArray:self.class.databaseFieldNames];
 
@@ -1017,7 +1022,24 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         else g_database.enqueuedChangedFieldsByClass[class] = [changedFields mutableCopy];
     } else {
         // notify immediately
-        NSDictionary *userInfo = @{ FCModelChangedFieldsKey : changedFields };
+        NSDictionary *userInfo =
+            changedObject ? (
+                changeType == FCModelChangeTypeUpdate && priorFieldValues ?
+                @{
+                    FCModelChangedFieldsKey : changedFields,
+                    FCModelChangeTypeKey : @(changeType),
+                    FCModelInstanceKey : changedObject,
+                    FCModelOldFieldValuesKey : priorFieldValues,
+                } : @{
+                    FCModelChangedFieldsKey : changedFields,
+                    FCModelChangeTypeKey : @(changeType),
+                    FCModelInstanceKey : changedObject,
+                }
+            ) : @{
+                FCModelChangedFieldsKey : changedFields,
+                FCModelChangeTypeKey : @(FCModelChangeTypeUnspecified)
+            }
+        ;
         [NSNotificationCenter.defaultCenter postNotificationName:FCModelWillSendChangeNotification object:self userInfo:userInfo];
         [NSNotificationCenter.defaultCenter postNotificationName:FCModelChangeNotification object:self userInfo:userInfo];
     }
@@ -1032,7 +1054,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 for (FCModel *m in classCache.objectEnumerator.allObjects) [m reload];
             }
         
-            [modelClass postChangeNotificationWithChangedFields:nil];
+            [modelClass postChangeNotificationWithChangedFields:nil changedObject:nil changeType:FCModelChangeTypeUnspecified priorFieldValues:nil];
         }];
     });
 }

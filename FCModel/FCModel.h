@@ -35,6 +35,23 @@ extern NSString * const FCModelInstanceKey;
 // "Changed" field names may be overly inclusive: all named fields may not *actually* have changed, but all actual changes will be in the set.
 //
 extern NSString * const FCModelChangedFieldsKey;
+//
+// userInfo[FCModelOldFieldValuesKey] is an NSDictionary of NSString field names to values.
+// Only included in update notifications.
+// If included, it may be overly inclusive: all specified fields may not *actually* have changed, but all actual changes will be present.
+//
+extern NSString * const FCModelOldFieldValuesKey;
+//
+// userInfo[FCModelChangeTypeKey] is an NSNumber from the following enum:
+//
+extern NSString * const FCModelChangeTypeKey;
+
+typedef NS_ENUM(NSInteger, FCModelChangeType) {
+    FCModelChangeTypeUnspecified, // Any change or changes may have been made
+    FCModelChangeTypeInsert,      // The object in FCModelInstanceKey is non-nil, and was inserted into the database
+    FCModelChangeTypeUpdate,      // The object in FCModelInstanceKey is non-nil, and was updated in the database
+    FCModelChangeTypeDelete       // The object in FCModelInstanceKey is non-nil, and was deleted from the database
+};
 
 
 @interface FCModel : NSObject

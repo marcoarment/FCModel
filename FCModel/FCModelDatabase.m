@@ -10,7 +10,7 @@
 #import <sqlite3.h>
 
 @interface FCModel ()
-+ (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields;
++ (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields changedObject:(FCModel *)changedObject changeType:(FCModelChangeType)changeType priorFieldValues:(NSDictionary *)priorFieldValues;
 + (void)dataChangedExternally;
 @end
 
@@ -37,8 +37,8 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 
     // Can't run synchronously since SQLite requires that no other database queries are executed before this function returns,
     //  and queries are likely to be executed by any notification listeners.
-    if (queue.isQueuingNotifications) [class postChangeNotificationWithChangedFields:nil];
-    else dispatch_async(dispatch_get_main_queue(), ^{ [class postChangeNotificationWithChangedFields:nil]; });
+    if (queue.isQueuingNotifications) [class postChangeNotificationWithChangedFields:nil changedObject:nil changeType:FCModelChangeTypeUnspecified priorFieldValues:nil];
+    else dispatch_async(dispatch_get_main_queue(), ^{ [class postChangeNotificationWithChangedFields:nil changedObject:nil changeType:FCModelChangeTypeUnspecified priorFieldValues:nil]; });
 }
 
 @interface FCModelDatabase () {
