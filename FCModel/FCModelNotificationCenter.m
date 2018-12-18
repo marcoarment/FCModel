@@ -27,7 +27,7 @@
 {
     if ( (self = [super init]) ) {
         self.observersByTarget = [NSMapTable weakToStrongObjectsMapTable];
-        self.targetWriteQueue = dispatch_queue_create(NULL, DISPATCH_QUEUE_SERIAL);
+        self.targetWriteQueue = dispatch_queue_create("FCModelNotificationCenter", DISPATCH_QUEUE_SERIAL);
     }
     return self;
 }
