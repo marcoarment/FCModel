@@ -45,6 +45,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     int changeCounterReadFileDescriptor;
     int dispatchEventFileDescriptor;
     dispatch_source_t dispatchFileWriteSource;
+    BOOL isMonitoringForExternalChanges;
 }
 @property (nonatomic) FMDatabase *openDatabase;
 @property (nonatomic) NSString *path;
@@ -90,8 +91,10 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 
 - (void)startMonitoringForExternalChanges
 {
+    if (isMonitoringForExternalChanges) return;
     if (! self.openDatabase) [[NSException exceptionWithName:NSGenericException reason:@"Database must be open" userInfo:nil] raise];
-    
+    isMonitoringForExternalChanges = YES;
+
     const char *fsp = _path.fileSystemRepresentation;
     changeCounterReadFileDescriptor = open(fsp, O_RDONLY);
     dispatchEventFileDescriptor = open(fsp, O_EVTONLY);
@@ -115,10 +118,13 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 
 - (void)close
 {
-    dispatchEventFileDescriptor = 0;
-    changeCounterReadFileDescriptor = 0;
-    dispatch_source_cancel(dispatchFileWriteSource);
-    dispatchFileWriteSource = NULL;
+    if (isMonitoringForExternalChanges) {
+        dispatchEventFileDescriptor = 0;
+        changeCounterReadFileDescriptor = 0;
+        if (dispatchFileWriteSource) dispatch_source_cancel(dispatchFileWriteSource);
+        dispatchFileWriteSource = NULL;
+        isMonitoringForExternalChanges = NO;
+    }
     [self.openDatabase close];
     self.openDatabase = nil;
 }
