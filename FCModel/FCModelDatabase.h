@@ -16,7 +16,6 @@
 @interface FCModelDatabase : NSObject
 
 - (instancetype)initWithDatabasePath:(NSString *)filename;
-- (void)startMonitoringForExternalChanges;
 - (void)close;
 - (void)inDatabase:(void (^)(FMDatabase *db))block;
 

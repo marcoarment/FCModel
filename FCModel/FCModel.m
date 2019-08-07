@@ -149,9 +149,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block FCModel *model = NULL;
     [g_database inDatabase:^(FMDatabase *db) {
         FMResultSet *s = [db executeQuery:[self expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], key];
-        if (! s) [self queryFailedInDatabase:db];
-        if ([s next]) model = [[self alloc] initWithFieldValues:s.resultDictionary existsInDatabaseAlready:YES];
+        if (! s || db.lastErrorCode) { [self queryFailedInDatabase:db]; return; }
+        NSError *error = nil;
+        if ([s nextWithError:&error]) model = [[self alloc] initWithFieldValues:s.resultDictionary existsInDatabaseAlready:YES];
         [s close];
+        if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
     }];
     
     return model;
@@ -164,8 +166,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         [g_database inDatabase:^(FMDatabase *db) {
             if (self.isDeleted) return;
             FMResultSet *s = [db executeQuery:[self.class expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], self.primaryKey];
-            if (! s) [self.class queryFailedInDatabase:db];
-            if ([s next]) {
+            if (! s || db.lastErrorCode) { [self.class queryFailedInDatabase:db]; return; }
+            NSError *error = nil;
+            if ([s nextWithError:&error]) {
                 [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL *stop) {
                     id suppliedValue = s.resultDictionary[key];
                     if (suppliedValue) [self setValue:(suppliedValue == NSNull.null ? nil : suppliedValue) forKey:key];
@@ -174,6 +177,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 self._rowValuesInDatabase = s.resultDictionary;
             }
             [s close];
+            if (error && error.code != SQLITE_OK) [self.class queryFailedInDatabase:db];
         }];
     });
     return success;
@@ -235,7 +239,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             if (mustQueueNotificationsLocally) g_database.isQueuingNotifications = YES;
             
             BOOL success = va_args ? [db executeUpdate:[self expandQuery:query] withVAList:va_args] : [db executeUpdate:[self expandQuery:query] withArgumentsInArray:array_args];
-            if (! success) [self queryFailedInDatabase:db];
+            if (! success || db.lastErrorCode) [self queryFailedInDatabase:db];
 
             if (mustQueueNotificationsLocally) {
                 g_database.isQueuingNotifications = NO;
@@ -274,15 +278,17 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             NSString *pkName = g_primaryKeyFieldName[self];
             NSString *expandedQuery = query ? [self expandQuery:[@"SELECT * FROM \"$T\" WHERE " stringByAppendingString:query]] : [self expandQuery:@"SELECT * FROM \"$T\""];
             FMResultSet *s = va_args ? [db executeQuery:expandedQuery withVAList:va_args] : [db executeQuery:expandedQuery withArgumentsInArray:argsArray];
-            if (! s) [self queryFailedInDatabase:db];
+            if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
 
-            while ([s next]) {
+            NSError *error = nil;
+            while ([s nextWithError:&error] && (! error || error.code == SQLITE_OK)) {
                 NSDictionary *rowDictionary = s.resultDictionary;
                 instance = [self instanceWithPrimaryKey:rowDictionary[pkName] databaseRowValues:rowDictionary createIfNonexistent:NO];
                 if (onlyFirst) break;
                 [instances addObject:instance];
             }
             [s close];
+            if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
         }];
     });
     
@@ -341,12 +347,14 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         [g_database inDatabase:^(FMDatabase *db) {
             NSString *expandedQuery = [self expandQuery:(queryAfterWHERE ? [@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE] : @"SELECT COUNT(*) FROM $T")];
             FMResultSet *s = va_args ? [db executeQuery:expandedQuery withVAList:va_args] : [db executeQuery:expandedQuery withArgumentsInArray:args];
-            if (! s) [self queryFailedInDatabase:db];
-            if ([s next]) {
+            if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
+            NSError *error = nil;
+            if ([s nextWithError:&error]) {
                 NSNumber *value = [s objectForColumnIndex:0];
                 if (value) count = value.unsignedIntegerValue;
             }
             [s close];
+            if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
         }];
     });
     return count;
@@ -363,9 +371,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     fcm_onMainThread(^{
         [g_database inDatabase:^(FMDatabase *db) {
             FMResultSet *s = va_args ? [db executeQuery:[self expandQuery:query] withVAList:va_args] : [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
-            if (! s) [self queryFailedInDatabase:db];
-            while ([s next]) [columnArray addObject:[s objectForColumnIndex:0]];
+            if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
+            NSError *error = nil;
+            while ([s nextWithError:&error] && (! error || error.code == SQLITE_OK)) [columnArray addObject:[s objectForColumnIndex:0]];
             [s close];
+            if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
         }];
     });
     return columnArray;
@@ -381,9 +391,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     fcm_onMainThread(^{
         [g_database inDatabase:^(FMDatabase *db) {
             FMResultSet *s = va_args ? [db executeQuery:[self expandQuery:query] withVAList:va_args] : [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
-            if (! s) [self queryFailedInDatabase:db];
-            while ([s next]) [rows addObject:s.resultDictionary];
+            if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
+            NSError *error = nil;
+            while ([s nextWithError:&error] && (! error || error.code == SQLITE_OK)) [rows addObject:s.resultDictionary];
             [s close];
+            if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
         }];
     });
     return rows;
@@ -399,9 +411,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     fcm_onMainThread(^{
         [g_database inDatabase:^(FMDatabase *db) {
             FMResultSet *s = va_args ? [db executeQuery:[self expandQuery:query] withVAList:va_args] : [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
-            if (! s) [self queryFailedInDatabase:db];
-            if ([s next]) firstValue = [[s objectForColumnIndex:0] copy];
+            if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
+            NSError *error = nil;
+            if ([s nextWithError:&error] && (! error || error.code == SQLITE_OK)) firstValue = [[s objectForColumnIndex:0] copy];
             [s close];
+            if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
         }];
     });
     return firstValue;
@@ -456,9 +470,13 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)queryFailedInDatabase:(FMDatabase *)db
 {
-    NSException *exception = [NSException exceptionWithName:FCModelException reason:[NSString stringWithFormat:@"Query failed with SQLite error %d: %@", db.lastErrorCode, db.lastErrorMessage] userInfo:nil];
+    int lastErrorCode = db.lastErrorCode;
+    NSString *lastErrorMessage = db.lastErrorMessage;
+    NSException *exception = [NSException exceptionWithName:FCModelException reason:[NSString stringWithFormat:@"Query failed with SQLite error %d: %@", lastErrorCode, lastErrorMessage] userInfo:nil];
 
-    if (dbErrorHandler) dbErrorHandler(exception, db.lastErrorCode, db.lastErrorMessage);
+    [FCModel closeDatabase];
+
+    if (dbErrorHandler) dbErrorHandler(exception, lastErrorCode, lastErrorMessage);
     else [exception raise];
 }
 
@@ -652,7 +670,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             BOOL success = NO;
             success = [db executeUpdate:query withArgumentsInArray:values];
             g_database.isInInternalWrite = NO;
-            if (! success) [self.class queryFailedInDatabase:db];
+            if (! success || db.lastErrorCode) [self.class queryFailedInDatabase:db];
             
             previousRowValuesInDatabase = self._rowValuesInDatabase;
             NSMutableDictionary *newRowValues = previousRowValuesInDatabase ? [previousRowValuesInDatabase mutableCopy] : [NSMutableDictionary dictionary];
@@ -685,7 +703,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             g_database.isInInternalWrite = YES;
             success = [db executeUpdate:query, [self primaryKey]];
             g_database.isInInternalWrite = NO;
-            if (! success) [self.class queryFailedInDatabase:db];
+            if (! success || db.lastErrorCode) [self.class queryFailedInDatabase:db];
 
             _inDatabaseStatus = FCModelInDatabaseStatusDeleted;
         }];
@@ -931,8 +949,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         g_primaryKeyFieldName = [mutablePrimaryKeyFieldName copy];        
 
     }];
-
-    [g_database startMonitoringForExternalChanges];
 }
 
 + (void)closeDatabase
@@ -1043,20 +1059,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         [NSNotificationCenter.defaultCenter postNotificationName:FCModelWillSendChangeNotification object:self userInfo:userInfo];
         [NSNotificationCenter.defaultCenter postNotificationName:FCModelChangeNotification object:self userInfo:userInfo];
     }
-}
-
-+ (void)dataChangedExternally
-{
-    fcm_onMainThread(^{
-        [g_fieldInfo enumerateKeysAndObjectsUsingBlock:^(Class modelClass, id obj, BOOL *stop) {
-            NSMapTable *classCache = g_instances[modelClass];
-            if (classCache) {
-                for (FCModel *m in classCache.objectEnumerator.allObjects) [m reload];
-            }
-        
-            [modelClass postChangeNotificationWithChangedFields:nil changedObject:nil changeType:FCModelChangeTypeUnspecified priorFieldValues:nil];
-        }];
-    });
 }
 
 @end
