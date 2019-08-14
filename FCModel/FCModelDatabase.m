@@ -19,6 +19,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
     if (! class || ! [class isSubclassOfClass:FCModel.class]) return;
 
     FCModelDatabase *queue = (__bridge FCModelDatabase *) context;
+    if (queue.isInInternalWrite) return;
 
     // Can't run synchronously since SQLite requires that no other database queries are executed before this function returns,
     //  and queries are likely to be executed by any notification listeners.
