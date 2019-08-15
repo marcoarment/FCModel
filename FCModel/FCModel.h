@@ -135,6 +135,7 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 // The next subsequent request will repopulate the cached data, either by querying the DB (cachedInstancesWhere)
 //  or calling the generator block (cachedObjectWithIdentifier).
 //
++ (NSArray *)cachedAllInstances;
 + (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
 + (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments ignoreFieldsForInvalidation:(NSSet *)ignoredFields;
 + (id)cachedObjectWithIdentifier:(id)identifier generator:(id (^)(void))generatorBlock;

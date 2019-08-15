@@ -16,6 +16,76 @@
 #import <sqlite3.h>
 #import <Security/Security.h>
 
+//#define QUERY_PROFILING
+
+#ifdef QUERY_PROFILING
+#warning FCModel query profiling enabled!
+static NSMutableDictionary<NSString *, NSMutableArray *> *g_queryProfilingTiming = nil;
+static NSTimeInterval g_queryProfileStartTime = 0;
+static NSString *g_queryProfileCurrentQuery = nil;
+
+@interface FCModelProfiledQuery : NSObject
+@property (nonatomic, copy) NSString *query;
+@property (nonatomic) NSTimeInterval totalTime;
+@property (nonatomic) NSInteger invocationCount;
+@end
+@implementation FCModelProfiledQuery
+@end
+static void queryProfilePrintSummary(void)
+{
+    NSMutableArray<FCModelProfiledQuery *> *queries = [NSMutableArray array];
+    [g_queryProfilingTiming enumerateKeysAndObjectsUsingBlock:^(NSString *query, NSMutableArray *records, BOOL *stop) {
+        FCModelProfiledQuery *q = [FCModelProfiledQuery new];
+        q.query = query;
+        for (NSNumber *n in records) {
+            q.invocationCount++;
+            q.totalTime += n.doubleValue;
+        }
+        [queries addObject:q];
+    }];
+
+    [queries sortUsingDescriptors:@[ [NSSortDescriptor sortDescriptorWithKey:@"totalTime" ascending:NO] ]];
+    NSLog(@"============== FCModel query profiles ==================");
+    for (FCModelProfiledQuery *q in queries) {
+        NSLog(@"%2.3fs (%5lx): %@", q.totalTime, (long) q.invocationCount, q.query);
+    }
+}
+
+static NSTimer *queryProfilePrintSummaryTimer = nil;
+static NSTimer *queryProfileResetTimer = nil;
+static void queryProfileInit(void)
+{
+    fcm_onMainThread(^{
+        queryProfilePrintSummaryTimer = [NSTimer scheduledTimerWithTimeInterval:5.0 repeats:YES block:^(NSTimer *timer) {
+            queryProfilePrintSummary();
+        }];
+        queryProfileResetTimer = [NSTimer scheduledTimerWithTimeInterval:30.0 repeats:YES block:^(NSTimer *timer) {
+            [g_queryProfilingTiming removeAllObjects];
+            NSLog(@"=---------------- FCModel query profiling RESET! ------------------");
+        }];
+    });
+}
+
+static void queryProfileStart(NSString *query)
+{
+    if (! g_queryProfilingTiming) queryProfileInit();
+    g_queryProfileCurrentQuery = [query copy];
+    g_queryProfileStartTime = [NSDate timeIntervalSinceReferenceDate];
+}
+static void queryProfileEnd(void)
+{
+    NSTimeInterval duration = [NSDate timeIntervalSinceReferenceDate] - g_queryProfileStartTime;
+    if (! g_queryProfilingTiming) g_queryProfilingTiming = [NSMutableDictionary dictionary];
+    if (! g_queryProfilingTiming[g_queryProfileCurrentQuery]) g_queryProfilingTiming[g_queryProfileCurrentQuery] = [NSMutableArray array];
+    [g_queryProfilingTiming[g_queryProfileCurrentQuery] addObject:@(duration)];
+}
+
+#else
+#define queryProfileInit()
+#define queryProfileStart(q)
+#define queryProfileEnd()
+#endif
+
 NSString * const FCModelException = @"FCModelException";
 NSString * const FCModelChangeNotification = @"FCModelChangeNotification";
 NSString * const FCModelInstanceKey = @"FCModelInstanceKey";
@@ -148,11 +218,14 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 {
     __block FCModel *model = NULL;
     [g_database inDatabase:^(FMDatabase *db) {
-        FMResultSet *s = [db executeQuery:[self expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], key];
+        NSString *expandedQuery = [self expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"];
+        queryProfileStart(expandedQuery);
+        FMResultSet *s = [db executeQuery:expandedQuery, key];
         if (! s || db.lastErrorCode) { [self queryFailedInDatabase:db]; return; }
         NSError *error = nil;
         if ([s nextWithError:&error]) model = [[self alloc] initWithFieldValues:s.resultDictionary existsInDatabaseAlready:YES];
         [s close];
+        queryProfileEnd();
         if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
     }];
     
@@ -165,7 +238,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     fcm_onMainThread(^{
         [g_database inDatabase:^(FMDatabase *db) {
             if (self.isDeleted) return;
-            FMResultSet *s = [db executeQuery:[self.class expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=?"], self.primaryKey];
+            NSString *expandedQuery = [self.class expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=? -- reload"];
+            queryProfileStart(expandedQuery);
+            FMResultSet *s = [db executeQuery:expandedQuery, self.primaryKey];
             if (! s || db.lastErrorCode) { [self.class queryFailedInDatabase:db]; return; }
             NSError *error = nil;
             if ([s nextWithError:&error]) {
@@ -177,6 +252,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 self._rowValuesInDatabase = s.resultDictionary;
             }
             [s close];
+            queryProfileEnd();
             if (error && error.code != SQLITE_OK) [self.class queryFailedInDatabase:db];
         }];
     });
@@ -205,6 +281,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 + (FCModelFieldInfo *)infoForFieldName:(NSString *)fieldName { return checkForOpenDatabaseFatal(NO) ? g_fieldInfo[self][fieldName] : nil; }
 
 #pragma mark - Find methods
+
++ (NSArray *)cachedAllInstances
+{
+    return [self cachedInstancesWhere:nil arguments:nil ignoreFieldsForInvalidation:nil];
+}
 
 + (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments
 {
@@ -238,7 +319,10 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             BOOL mustQueueNotificationsLocally = ! g_database.isQueuingNotifications;
             if (mustQueueNotificationsLocally) g_database.isQueuingNotifications = YES;
             
-            BOOL success = va_args ? [db executeUpdate:[self expandQuery:query] withVAList:va_args] : [db executeUpdate:[self expandQuery:query] withArgumentsInArray:array_args];
+            NSString *expandedQuery = [self expandQuery:query];
+            queryProfileStart(expandedQuery);
+            BOOL success = va_args ? [db executeUpdate:expandedQuery withVAList:va_args] : [db executeUpdate:expandedQuery withArgumentsInArray:array_args];
+            queryProfileEnd();
             if (! success || db.lastErrorCode) [self queryFailedInDatabase:db];
 
             if (mustQueueNotificationsLocally) {
@@ -277,6 +361,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         [g_database inDatabase:^(FMDatabase *db) {
             NSString *pkName = g_primaryKeyFieldName[self];
             NSString *expandedQuery = query ? [self expandQuery:[@"SELECT * FROM \"$T\" WHERE " stringByAppendingString:query]] : [self expandQuery:@"SELECT * FROM \"$T\""];
+            queryProfileStart(expandedQuery);
             FMResultSet *s = va_args ? [db executeQuery:expandedQuery withVAList:va_args] : [db executeQuery:expandedQuery withArgumentsInArray:argsArray];
             if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
 
@@ -288,6 +373,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 [instances addObject:instance];
             }
             [s close];
+            queryProfileEnd();
             if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
         }];
     });
@@ -346,6 +432,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     fcm_onMainThread(^{
         [g_database inDatabase:^(FMDatabase *db) {
             NSString *expandedQuery = [self expandQuery:(queryAfterWHERE ? [@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE] : @"SELECT COUNT(*) FROM $T")];
+            queryProfileStart(expandedQuery);
             FMResultSet *s = va_args ? [db executeQuery:expandedQuery withVAList:va_args] : [db executeQuery:expandedQuery withArgumentsInArray:args];
             if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
             NSError *error = nil;
@@ -354,6 +441,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 if (value) count = value.unsignedIntegerValue;
             }
             [s close];
+            queryProfileEnd();
             if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
         }];
     });
@@ -370,11 +458,14 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSMutableArray *columnArray = [NSMutableArray array];
     fcm_onMainThread(^{
         [g_database inDatabase:^(FMDatabase *db) {
-            FMResultSet *s = va_args ? [db executeQuery:[self expandQuery:query] withVAList:va_args] : [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
+            NSString *expandedQuery = [self expandQuery:query];
+            queryProfileStart(expandedQuery);
+            FMResultSet *s = va_args ? [db executeQuery:expandedQuery withVAList:va_args] : [db executeQuery:expandedQuery withArgumentsInArray:arguments];
             if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
             NSError *error = nil;
             while ([s nextWithError:&error] && (! error || error.code == SQLITE_OK)) [columnArray addObject:[s objectForColumnIndex:0]];
             [s close];
+            queryProfileEnd();
             if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
         }];
     });
@@ -390,11 +481,14 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSMutableArray *rows = [NSMutableArray array];
     fcm_onMainThread(^{
         [g_database inDatabase:^(FMDatabase *db) {
-            FMResultSet *s = va_args ? [db executeQuery:[self expandQuery:query] withVAList:va_args] : [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
+            NSString *expandedQuery = [self expandQuery:query];
+            queryProfileStart(expandedQuery);
+            FMResultSet *s = va_args ? [db executeQuery:expandedQuery withVAList:va_args] : [db executeQuery:expandedQuery withArgumentsInArray:arguments];
             if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
             NSError *error = nil;
             while ([s nextWithError:&error] && (! error || error.code == SQLITE_OK)) [rows addObject:s.resultDictionary];
             [s close];
+            queryProfileEnd();
             if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
         }];
     });
@@ -410,11 +504,14 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block id firstValue = nil;
     fcm_onMainThread(^{
         [g_database inDatabase:^(FMDatabase *db) {
-            FMResultSet *s = va_args ? [db executeQuery:[self expandQuery:query] withVAList:va_args] : [db executeQuery:[self expandQuery:query] withArgumentsInArray:arguments];
+            NSString *expandedQuery = [self expandQuery:query];
+            queryProfileStart(expandedQuery);
+            FMResultSet *s = va_args ? [db executeQuery:expandedQuery withVAList:va_args] : [db executeQuery:expandedQuery withArgumentsInArray:arguments];
             if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
             NSError *error = nil;
             if ([s nextWithError:&error] && (! error || error.code == SQLITE_OK)) firstValue = [[s objectForColumnIndex:0] copy];
             [s close];
+            queryProfileEnd();
             if (error && error.code != SQLITE_OK) [self queryFailedInDatabase:db];
         }];
     });
@@ -648,6 +745,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                     [columnNames componentsJoinedByString:@"\"=?,\""],
                     pkName
                 ];
+                
+                queryProfileStart( ([NSString stringWithFormat:@"%@::save -- update", tableName]) );
             } else {
                 if (columnNames.count > 0) {
                     query = [NSString stringWithFormat:
@@ -664,11 +763,14 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                         pkName
                     ];
                 }
+
+                queryProfileStart( ([NSString stringWithFormat:@"%@::save -- insert", tableName]) );
             }
 
             g_database.isInInternalWrite = YES;
             BOOL success = NO;
             success = [db executeUpdate:query withArgumentsInArray:values];
+            queryProfileEnd();
             g_database.isInInternalWrite = NO;
             if (! success || db.lastErrorCode) [self.class queryFailedInDatabase:db];
             
@@ -701,7 +803,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             __block BOOL success = NO;
             NSString *query = [self.class expandQuery:@"DELETE FROM \"$T\" WHERE \"$PK\" = ?"];
             g_database.isInInternalWrite = YES;
+            queryProfileStart(query);
             success = [db executeUpdate:query, [self primaryKey]];
+            queryProfileEnd();
             g_database.isInInternalWrite = NO;
             if (! success || db.lastErrorCode) [self.class queryFailedInDatabase:db];
 
@@ -1020,7 +1124,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block BOOL success = NO;
     [self inDatabaseSync:^(FMDatabase *db) {
         if (db.inTransaction) return;
+        queryProfileStart(@"VACUUM");
         [db executeUpdate:@"VACUUM"];
+        queryProfileEnd();
         success = YES;
     }];
     
