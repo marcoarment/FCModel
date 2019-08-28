@@ -190,6 +190,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 + (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue databaseRowValues:(NSDictionary *)fieldValues createIfNonexistent:(BOOL)create
 {
     if (! checkForOpenDatabaseFatal(NO)) return nil;
+    
+    if (! g_primaryKeyFieldName[self]) {
+        [[NSException exceptionWithName:FCModelException reason:[NSString stringWithFormat:@"No primary-key field name set for class \"%@\"", NSStringFromClass(self)] userInfo:nil] raise];
+    }
+    
     primaryKeyValue = [self normalizedPrimaryKeyValue:primaryKeyValue];
     if (! primaryKeyValue || primaryKeyValue == NSNull.null) return (create ? [self new] : nil);
     
