@@ -1088,6 +1088,15 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 #pragma mark - Batch notification queuing
 
++ (void)inDatabaseSyncWithoutChangeNotifications:(void (^)(FMDatabase *db))block
+{
+    [self inDatabaseSync:^(FMDatabase *db) {
+        g_database.isQueuingNotifications = YES;
+        block(db);
+        g_database.isQueuingNotifications = NO;
+    }];
+}
+
 + (BOOL)isInTransaction
 {
     __block BOOL inTransaction = NO;

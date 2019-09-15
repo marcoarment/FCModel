@@ -75,6 +75,8 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 //
 + (void)inDatabaseSync:(void (^)(FMDatabase *db))block;
 
++ (void)inDatabaseSyncWithoutChangeNotifications:(void (^)(FMDatabase *db))block;
+
 // Convenience method that offers $T/$PK parsing when doing manual batch updates
 //
 + (void)executeUpdateQuery:(NSString *)query, ...;
