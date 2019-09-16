@@ -1094,6 +1094,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         g_database.isQueuingNotifications = YES;
         block(db);
         g_database.isQueuingNotifications = NO;
+        [g_database.enqueuedChangedFieldsByClass removeAllObjects];
     }];
 }
 
