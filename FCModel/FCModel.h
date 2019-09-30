@@ -162,6 +162,7 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 //
 - (BOOL)reload;
 - (BOOL)save:(void (^)(void))modificiationsBlock;
+- (BOOL)saveWithoutChangeNotifications:(void (^)(void))modificiationsBlock;
 
 // Notification shortcuts: call on an FCModel subclass to be notified for only changes to certain fields
 + (void)addObserver:(id)target selector:(SEL)action forChangedFields:(NSSet *)fieldNamesToWatch;

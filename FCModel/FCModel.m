@@ -1098,6 +1098,18 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     }];
 }
 
+- (BOOL)saveWithoutChangeNotifications:(void (^)(void))modificiationsBlock
+{
+    __block BOOL success = NO;
+    fcm_onMainThread(^{
+        g_database.isQueuingNotifications = YES;
+        success = [self save:modificiationsBlock];
+        g_database.isQueuingNotifications = NO;
+        [g_database.enqueuedChangedFieldsByClass removeAllObjects];
+    });
+    return success;
+}
+
 + (BOOL)isInTransaction
 {
     __block BOOL inTransaction = NO;
