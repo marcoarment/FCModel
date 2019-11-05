@@ -635,7 +635,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                         NSAssert1(attempts < 100, @"FCModel subclass %@ is not returning usable, unique values from primaryKeyValueForNewInstance", NSStringFromClass(self.class));
                         
                         id newKeyValue = [self.class primaryKeyValueForNewInstance];
-                        if ([self.class instanceFromDatabaseWithPrimaryKey:newKeyValue]) continue; // already exists in database
+                        if ([self.class instanceFromDatabaseWithPrimaryKey:newKeyValue]) {
+                            conflict = YES;
+                        } else {
+                            conflict = NO;
+                        }
                         [self setValue:newKeyValue forKey:key];
                     } while (conflict);
                     
