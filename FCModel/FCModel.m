@@ -11,8 +11,6 @@
 #import "FCModelCachedObject.h"
 #import "FCModelDatabase.h"
 #import "FCModelNotificationCenter.h"
-#import "FMDatabase.h"
-#import "FMDatabaseAdditions.h"
 #import <sqlite3.h>
 #import <Security/Security.h>
 
