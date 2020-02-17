@@ -1117,6 +1117,14 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     return inTransaction;
 }
 
++ (void)performInTransactionForPerformance:(void (^)(void))block
+{
+    [self inDatabaseSync:^(FMDatabase *db) {
+        if (db.inTransaction) block();
+        else [self performTransaction:^BOOL{ block(); return YES; }];
+    }];
+}
+
 + (void)performTransaction:(BOOL (^)(void))block
 {
     __block NSDictionary *changedFieldsToNotify = nil;

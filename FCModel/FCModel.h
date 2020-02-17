@@ -189,6 +189,9 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 + (void)performTransaction:(BOOL (^)(void))block; // return YES to commit, NO to roll back
 + (BOOL)isInTransaction;
 
+// This variant has no control over commit/rollback; safe to potentially nest inside other transactions if you only want performance
++ (void)performInTransactionForPerformance:(void (^)(void))block;
+
 // Field info: You probably won't need this most of the time, but it's nice to have sometimes. FCModel's generating this privately
 //  anyway, so you might as well have read-only access to it if it can help you avoid some code. (I've already needed it.)
 //
