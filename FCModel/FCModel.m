@@ -2,7 +2,7 @@
 //  FCModel.m
 //
 //  Created by Marco Arment on 7/18/13.
-//  Copyright (c) 2013-2014 Marco Arment. See included LICENSE file.
+//  Copyright (c) 2013-2020 Marco Arment. See included LICENSE file.
 //
 
 #import <objc/runtime.h>
@@ -55,7 +55,7 @@ static NSTimer *queryProfilePrintSummaryTimer = nil;
 static NSTimer *queryProfileResetTimer = nil;
 static void queryProfileInit(void)
 {
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         queryProfilePrintSummaryTimer = [NSTimer scheduledTimerWithTimeInterval:5.0 repeats:YES block:^(NSTimer *timer) {
             queryProfilePrintSummary();
         }];
@@ -107,6 +107,21 @@ typedef NS_ENUM(char, FCModelInDatabaseStatus) {
     FCModelInDatabaseStatusRowExists,
     FCModelInDatabaseStatusDeleted
 };
+
+static dispatch_once_t g_isMainQueue;
+BOOL fcm_isMainQueue(void)
+{
+    dispatch_once(&g_isMainQueue, ^{ dispatch_queue_set_specific(dispatch_get_main_queue(), &g_isMainQueue, &g_isMainQueue, NULL); });
+    return dispatch_get_specific(&g_isMainQueue) == &g_isMainQueue;
+}
+
+void fcm_onMainQueue(void (^block)(void))
+{
+    dispatch_once(&g_isMainQueue, ^{ dispatch_queue_set_specific(dispatch_get_main_queue(), &g_isMainQueue, &g_isMainQueue, NULL); });
+    if (dispatch_get_specific(&g_isMainQueue) == &g_isMainQueue) { block(); }
+    else { dispatch_sync(dispatch_get_main_queue(), block); }
+}
+
 
 @interface FCModel () {
     FCModelInDatabaseStatus _inDatabaseStatus;
@@ -177,7 +192,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 + (NSArray *)allLoadedInstances
 {
     __block NSArray *outArray = nil;
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         NSMapTable *classCache = g_instances ? g_instances[self] : nil;
         outArray = classCache.objectEnumerator.allObjects;
     });
@@ -199,7 +214,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     if (! primaryKeyValue || primaryKeyValue == NSNull.null) return (create ? [self new] : nil);
     
     __block FCModel *instance = nil;
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         if (! g_instances) g_instances = [NSMutableDictionary dictionary];
         NSMapTable *classCache = g_instances[self];
         if (! classCache) classCache = g_instances[(id) self] = [NSMapTable strongToWeakObjectsMapTable];
@@ -240,9 +255,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 - (BOOL)reload
 {
     __block BOOL success = NO;
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         [g_database inDatabase:^(FMDatabase *db) {
             if (self.isDeleted) return;
+            [self observableObjectPropertiesWillChange];
+            
             NSString *expandedQuery = [self.class expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=? -- reload"];
             queryProfileStart(expandedQuery);
             FMResultSet *s = [db executeQuery:expandedQuery, self.primaryKey];
@@ -267,7 +284,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 - (BOOL)save:(void (^)(void))modificiationsBlock
 {
     __block BOOL success = NO;
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         [g_database inDatabase:^(FMDatabase *db) {
             if (self.isDeleted) return;
             if (modificiationsBlock) {
@@ -318,7 +335,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 {
     checkForOpenDatabaseFatal(YES);
 
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         __block NSDictionary *changedFieldsToNotify = nil;
         [g_database inDatabase:^(FMDatabase *db) {
             BOOL mustQueueNotificationsLocally = ! g_database.isQueuingNotifications;
@@ -362,7 +379,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSMutableArray *instances = onlyFirst ? nil : [NSMutableArray array];
     __block FCModel *instance = nil;
 
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         [g_database inDatabase:^(FMDatabase *db) {
             NSString *pkName = g_primaryKeyFieldName[self];
             NSString *expandedQuery = query ? [self expandQuery:[@"SELECT * FROM \"$T\" WHERE " stringByAppendingString:query]] : [self expandQuery:@"SELECT * FROM \"$T\""];
@@ -434,7 +451,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     if (! checkForOpenDatabaseFatal(NO)) return 0;
     
     __block NSUInteger count = 0;
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         [g_database inDatabase:^(FMDatabase *db) {
             NSString *expandedQuery = [self expandQuery:(queryAfterWHERE ? [@"SELECT COUNT(*) FROM $T WHERE " stringByAppendingString:queryAfterWHERE] : @"SELECT COUNT(*) FROM $T")];
             queryProfileStart(expandedQuery);
@@ -461,7 +478,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     if (! checkForOpenDatabaseFatal(NO)) return nil;
     
     NSMutableArray *columnArray = [NSMutableArray array];
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         [g_database inDatabase:^(FMDatabase *db) {
             NSString *expandedQuery = [self expandQuery:query];
             queryProfileStart(expandedQuery);
@@ -484,7 +501,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     if (! checkForOpenDatabaseFatal(NO)) return nil;
 
     NSMutableArray *rows = [NSMutableArray array];
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         [g_database inDatabase:^(FMDatabase *db) {
             NSString *expandedQuery = [self expandQuery:query];
             queryProfileStart(expandedQuery);
@@ -507,7 +524,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     if (! checkForOpenDatabaseFatal(NO)) return nil;
 
     __block id firstValue = nil;
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         [g_database inDatabase:^(FMDatabase *db) {
             NSString *expandedQuery = [self expandQuery:query];
             queryProfileStart(expandedQuery);
@@ -532,7 +549,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     if (primaryKeyValues.count == 0) return @[];
     
     __block NSArray *allFoundInstances = nil;
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         static int maxParameterCount = 0;
         if (! maxParameterCount) {
             [g_database inDatabase:^(FMDatabase *db) {
@@ -602,7 +619,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 - (instancetype)init
 {
     self = [self initWithFieldValues:@{} existsInDatabaseAlready:NO];
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         if (! g_instances) g_instances = [NSMutableDictionary dictionary];
         NSMapTable *classCache = g_instances[self.class];
         if (! classCache) classCache = g_instances[(id) self.class] = [NSMapTable strongToWeakObjectsMapTable];
@@ -649,6 +666,18 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         [self didInit];
     }
     return self;
+}
+
+- (void)observableObjectPropertiesWillChange
+{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wselector"
+    fcm_onMainQueue(^{
+        if ([self respondsToSelector:@selector(__observableObjectPropertiesWillChange)]) {
+            [self performSelector:@selector(__observableObjectPropertiesWillChange)];
+        }
+    });
+#pragma clang diagnostic pop
 }
 
 - (void)revertUnsavedChanges
@@ -698,7 +727,9 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block NSSet *changedFields;
     __block FCModelChangeType changeType = FCModelChangeTypeUnspecified;
     __block NSDictionary *previousRowValuesInDatabase = nil;
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
+        [self observableObjectPropertiesWillChange];
+        
         [g_database inDatabase:^(FMDatabase *db) {
         
             NSDictionary *changes = self.unsavedChanges;
@@ -800,7 +831,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     checkForOpenDatabaseFatal(YES);
     __block id pkValue = nil;
 
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         [g_database inDatabase:^(FMDatabase *db) {
             if (_inDatabaseStatus == FCModelInDatabaseStatusDeleted) return;
             pkValue = self.primaryKey;
@@ -895,7 +926,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder moduleName:(NSString *)moduleName
 {
-    NSParameterAssert(NSThread.isMainThread);
+    NSParameterAssert(fcm_isMainQueue());
     
     g_database = [[FCModelDatabase alloc] initWithDatabasePath:path];
     NSMutableDictionary *mutableFieldInfo = [NSMutableDictionary dictionary];
@@ -1062,7 +1093,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)closeDatabase
 {
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         if (g_database) {
             [g_database close];
             g_database = nil;
@@ -1081,7 +1112,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 + (void)inDatabaseSync:(void (^)(FMDatabase *db))block
 {
     checkForOpenDatabaseFatal(YES);
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         [g_database inDatabase:block];
     });
 }
@@ -1101,7 +1132,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 - (BOOL)saveWithoutChangeNotifications:(void (^)(void))modificiationsBlock
 {
     __block BOOL success = NO;
-    fcm_onMainThread(^{
+    fcm_onMainQueue(^{
         g_database.isQueuingNotifications = YES;
         success = [self save:modificiationsBlock];
         g_database.isQueuingNotifications = NO;

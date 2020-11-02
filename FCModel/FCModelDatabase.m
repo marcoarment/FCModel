@@ -9,6 +9,10 @@
 #import "FCModel.h"
 #import <sqlite3.h>
 
+// defined in FCModel.m
+extern void fcm_onMainQueue(void (^block)(void));
+extern BOOL fcm_isMainQueue(void);
+
 @interface FCModel ()
 + (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields changedObject:(FCModel *)changedObject changeType:(FCModelChangeType)changeType priorFieldValues:(NSDictionary *)priorFieldValues;
 @end
@@ -47,7 +51,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 
 - (FMDatabase *)database
 {
-    if (! _openDatabase) fcm_onMainThread(^{
+    if (! _openDatabase) fcm_onMainQueue(^{
         self.openDatabase = [[FMDatabase alloc] initWithPath:_path];
         if (! [_openDatabase open]) {
             [[NSException exceptionWithName:NSGenericException reason:[NSString stringWithFormat:@"Cannot open or create database at path: %@", self.path] userInfo:nil] raise];
@@ -72,7 +76,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 
 - (void)inDatabase:(void (^)(FMDatabase *db))block
 {
-    NSParameterAssert(NSThread.isMainThread);
+    NSParameterAssert(fcm_isMainQueue());
     block(self.database);
 }
 

@@ -2,7 +2,7 @@
 //  FCModel.h
 //
 //  Created by Marco Arment on 7/18/13.
-//  Copyright (c) 2013-2014 Marco Arment. See included LICENSE file.
+//  Copyright (c) 2013-2020 Marco Arment. See included LICENSE file.
 //
 
 #import <Foundation/Foundation.h>
@@ -164,6 +164,10 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 - (BOOL)save:(void (^)(void))modificiationsBlock;
 - (BOOL)saveWithoutChangeNotifications:(void (^)(void))modificiationsBlock;
 
+// When using SwiftUI/Combine, call this to trigger a refresh manually if you modify fields outside of
+//  the usual save/reload/update methods, or after modifying other properties that aren't database columns
+- (void)observableObjectPropertiesWillChange;
+
 // Notification shortcuts: call on an FCModel subclass to be notified for only changes to certain fields
 + (void)addObserver:(id)target selector:(SEL)action forChangedFields:(NSSet *)fieldNamesToWatch;
 + (void)addObserver:(id)target selector:(SEL)action forAnyChangedFieldsExcept:(NSSet *)fieldNamesToIgnore;
@@ -241,13 +245,4 @@ typedef NS_ENUM(NSInteger, FCModelFieldType) {
 @property (nonatomic, readonly) NSString *propertyTypeEncoding;
 @end
 
-
-// Utility function used throughout FCModel:
-// If we're currently on the main thread, run block() sync, otherwise dispatch block() sync to main thread.
-inline __attribute__((always_inline)) void fcm_onMainThread(void (^block)(void))
-{
-    if (block) {
-        if (NSThread.isMainThread) block(); else dispatch_sync(dispatch_get_main_queue(), block);
-    }
-}
 
