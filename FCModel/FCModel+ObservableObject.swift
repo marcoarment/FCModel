@@ -10,18 +10,19 @@ import Combine
 import ObjectiveC
 
 extension FCModel : ObservableObject, Identifiable {
+    static private var objectWillChangeIdentifier: StaticString = "FCModelObservableObjectWillChange"
+
     public var objectWillChange: ObservableObjectPublisher {
         get {
-            if let oop = objc_getAssociatedObject(self, "FCModelObservableObjectPublisher") as? ObservableObjectPublisher {
+            if let oop = objc_getAssociatedObject(self, &FCModel.objectWillChangeIdentifier) as? ObservableObjectPublisher {
                 return oop
             }
             let oop = ObservableObjectPublisher()
-            objc_setAssociatedObject(self, "FCModelObservableObjectPublisher", oop, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            objc_setAssociatedObject(self, &FCModel.objectWillChangeIdentifier, oop, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
             return oop
         }
     }
-    
-    // called from [FCModel postChangeNotificationWithChangedFields:changedObject:changeType:priorFieldValues:]
+
     @objc public func __observableObjectPropertiesWillChange() {
         objectWillChange.send()
     }
@@ -29,7 +30,6 @@ extension FCModel : ObservableObject, Identifiable {
 
 class FCModelCollection<T: FCModel> : ObservableObject {
     @Published var instances: [T]
-    public var objectWillChange = ObservableObjectPublisher()
     
     private var fetcher: (() -> [T])
     private var ignoreChangedFields: Set<String>?
@@ -86,8 +86,7 @@ class FCModelCollection<T: FCModel> : ObservableObject {
             if let ignored = ignoreChangedFields, changedFields.subtracting(ignored).count == 0 { return }
             if let only = onlyIfChangedFields, changedFields.intersection(only).count == 0 { return }
         }
-        objectWillChange.send()
-        instances = fetcher()
-        objectWillChange.send()
+
+        self.instances = fetcher()
     }
 }

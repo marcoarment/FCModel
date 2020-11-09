@@ -258,7 +258,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     fcm_onMainQueue(^{
         [g_database inDatabase:^(FMDatabase *db) {
             if (self.isDeleted) return;
-            [self observableObjectPropertiesWillChange];
             
             NSString *expandedQuery = [self.class expandQuery:@"SELECT * FROM \"$T\" WHERE \"$PK\"=? -- reload"];
             queryProfileStart(expandedQuery);
@@ -266,6 +265,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
             if (! s || db.lastErrorCode) { [self.class queryFailedInDatabase:db]; return; }
             NSError *error = nil;
             if ([s nextWithError:&error]) {
+                [self observableObjectPropertiesWillChange];
                 [g_fieldInfo[self.class] enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL *stop) {
                     id suppliedValue = s.resultDictionary[key];
                     if (suppliedValue) [self setValue:(suppliedValue == NSNull.null ? nil : suppliedValue) forKey:key];
@@ -288,6 +288,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         [g_database inDatabase:^(FMDatabase *db) {
             if (self.isDeleted) return;
             if (modificiationsBlock) {
+                [self observableObjectPropertiesWillChange];
                 modificiationsBlock();
                 success = [self _save];
             }
@@ -728,8 +729,6 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block FCModelChangeType changeType = FCModelChangeTypeUnspecified;
     __block NSDictionary *previousRowValuesInDatabase = nil;
     fcm_onMainQueue(^{
-        [self observableObjectPropertiesWillChange];
-        
         [g_database inDatabase:^(FMDatabase *db) {
         
             NSDictionary *changes = self.unsavedChanges;
