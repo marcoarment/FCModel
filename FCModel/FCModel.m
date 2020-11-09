@@ -481,7 +481,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSMutableArray *columnArray = [NSMutableArray array];
     fcm_onMainQueue(^{
         [g_database inDatabase:^(FMDatabase *db) {
-            NSString *expandedQuery = [self expandQuery:query];
+            NSString *expandedQuery = [self expandQuery:query ?: @"SELECT * FROM \"$T\""];
             queryProfileStart(expandedQuery);
             FMResultSet *s = va_args ? [db executeQuery:expandedQuery withVAList:va_args] : [db executeQuery:expandedQuery withArgumentsInArray:arguments];
             if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
@@ -504,7 +504,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     NSMutableArray *rows = [NSMutableArray array];
     fcm_onMainQueue(^{
         [g_database inDatabase:^(FMDatabase *db) {
-            NSString *expandedQuery = [self expandQuery:query];
+            NSString *expandedQuery = [self expandQuery:query ?: @"SELECT * FROM \"$T\""];
             queryProfileStart(expandedQuery);
             FMResultSet *s = va_args ? [db executeQuery:expandedQuery withVAList:va_args] : [db executeQuery:expandedQuery withArgumentsInArray:arguments];
             if (! s || db.lastErrorCode) [self queryFailedInDatabase:db];
@@ -672,7 +672,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 - (void)observableObjectPropertiesWillChange
 {
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wselector"
+#pragma clang diagnostic ignored "-Wundeclared-selector"
     fcm_onMainQueue(^{
         if ([self respondsToSelector:@selector(__observableObjectPropertiesWillChange)]) {
             [self performSelector:@selector(__observableObjectPropertiesWillChange)];

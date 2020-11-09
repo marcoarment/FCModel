@@ -10,20 +10,18 @@ import Combine
 import ObjectiveC
 
 extension FCModel : ObservableObject, Identifiable {
-    static private var objectWillChangeIdentifier: StaticString = "FCModelObservableObjectWillChange"
-
     public var objectWillChange: ObservableObjectPublisher {
         get {
-            if let oop = objc_getAssociatedObject(self, &FCModel.objectWillChangeIdentifier) as? ObservableObjectPublisher {
-                return oop
-            }
-            let oop = ObservableObjectPublisher()
-            objc_setAssociatedObject(self, &FCModel.objectWillChangeIdentifier, oop, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-            return oop
+            let key = UnsafeRawPointer(method(for: #selector(__observableObjectPropertiesWillChange)))!
+            if let obj = objc_getAssociatedObject(self, key) as? ObservableObjectPublisher { return obj }
+            let obj = ObservableObjectPublisher()
+            objc_setAssociatedObject(self, key, obj, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            return obj
         }
     }
 
-    @objc public func __observableObjectPropertiesWillChange() {
+    // Called from FCModel::observableObjectPropertiesWillChange
+    @objc private func __observableObjectPropertiesWillChange() {
         objectWillChange.send()
     }
 }

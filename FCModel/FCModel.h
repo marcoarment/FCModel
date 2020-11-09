@@ -14,7 +14,7 @@
 #import "FMDatabase.h"
 #endif
 
-extern NSString * const FCModelException;
+extern NSString * _Nonnull const FCModelException;
 
 @class FCModelFieldInfo;
 
@@ -25,26 +25,26 @@ extern NSString * const FCModelException;
 //
 // Or set object to nil to get notified of operations to all FCModels.
 //
-extern NSString * const FCModelChangeNotification; // Any insert, update, or delete in the table.
+extern NSString * _Nonnull const FCModelChangeNotification; // Any insert, update, or delete in the table.
 //
 // userInfo[FCModelInstanceKey] is the specific FCModel instance that has changed. If this key is absent, multiple instances may have changed.
 //
-extern NSString * const FCModelInstanceKey;
+extern NSString * _Nonnull const FCModelInstanceKey;
 //
 // userInfo[FCModelChangedFieldsKey] is an NSSet of NSString field names.
 // "Changed" field names may be overly inclusive: all named fields may not *actually* have changed, but all actual changes will be in the set.
 //
-extern NSString * const FCModelChangedFieldsKey;
+extern NSString * _Nonnull const FCModelChangedFieldsKey;
 //
 // userInfo[FCModelOldFieldValuesKey] is an NSDictionary of NSString field names to values.
 // Only included in update notifications.
 // If included, it may be overly inclusive: all specified fields may not *actually* have changed, but all actual changes will be present.
 //
-extern NSString * const FCModelOldFieldValuesKey;
+extern NSString * _Nonnull const FCModelOldFieldValuesKey;
 //
 // userInfo[FCModelChangeTypeKey] is an NSNumber from the following enum:
 //
-extern NSString * const FCModelChangeTypeKey;
+extern NSString * _Nonnull const FCModelChangeTypeKey;
 
 typedef NS_ENUM(NSInteger, FCModelChangeType) {
     FCModelChangeTypeUnspecified, // Any change or changes may have been made
@@ -56,42 +56,42 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 
 @interface FCModel : NSObject
 
-@property (readonly) id primaryKey;
-@property (readonly) NSDictionary *allFields;
+@property (readonly) id _Nullable primaryKey;
+@property (readonly) NSDictionary * _Nonnull allFields;
 @property (readonly) BOOL hasUnsavedChanges;
 @property (readonly) BOOL existsInDatabase; // either deleted or never saved
 @property (readonly) BOOL isDeleted;
 
 // Swift classes have their module name prefixed onto their Objective-C class. To use FCModel with Swift, provide your module name.
 // You can find it in Xcode under Build Settings -> Product Module Name.
-+ (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder;
-+ (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder moduleName:(NSString *)moduleName;
++ (void)openDatabaseAtPath:(NSString * _Nonnull)path withDatabaseInitializer:(void (^ _Nullable)(FMDatabase * _Nonnull db))databaseInitializer schemaBuilder:(void (^ _Nonnull)(FMDatabase * _Nonnull db, int * _Nonnull schemaVersion))schemaBuilder;
++ (void)openDatabaseAtPath:(NSString * _Nonnull)path withDatabaseInitializer:(void (^ _Nullable)(FMDatabase * _Nonnull db))databaseInitializer schemaBuilder:(void (^ _Nonnull)(FMDatabase * _Nonnull db, int * _Nonnull schemaVersion))schemaBuilder moduleName:(NSString * _Nullable)moduleName;
 
-+ (NSArray *)databaseFieldNames;
-+ (NSString *)primaryKeyFieldName;
++ (NSArray * _Nullable)databaseFieldNames;
++ (NSString * _Nullable)primaryKeyFieldName;
 
 // Feel free to operate on the same database object with your own queries. They'll be
 //  executed synchronously on FCModel's private database-operation queue.
 //
-+ (void)inDatabaseSync:(void (^)(FMDatabase *db))block;
++ (void)inDatabaseSync:(void (^ _Nonnull)(FMDatabase * _Nonnull db))block;
 
-+ (void)inDatabaseSyncWithoutChangeNotifications:(void (^)(FMDatabase *db))block;
++ (void)inDatabaseSyncWithoutChangeNotifications:(void (^ _Nonnull)(FMDatabase * _Nonnull db))block;
 
 // Convenience method that offers $T/$PK parsing when doing manual batch updates
 //
-+ (void)executeUpdateQuery:(NSString *)query, ...;
-+ (void)executeUpdateQuery:(NSString *)query arguments:(NSArray *)args;
++ (void)executeUpdateQuery:(NSString * _Nullable)query, ...;
++ (void)executeUpdateQuery:(NSString * _Nullable)query arguments:(NSArray * _Nullable)args;
 
 // CRUD basics
-+ (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue; // will create if nonexistent
-+ (instancetype)instanceWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create; // will return nil if nonexistent
++ (instancetype _Nullable)instanceWithPrimaryKey:(id _Nullable)primaryKeyValue; // will create if nonexistent
++ (instancetype _Nullable)instanceWithPrimaryKey:(id _Nullable)primaryKeyValue createIfNonexistent:(BOOL)create; // will return nil if nonexistent
 
-- (instancetype)initWithPrimaryKey:(id)primaryKeyValue;
-- (instancetype)initWithPrimaryKey:(id)primaryKeyValue createIfNonexistent:(BOOL)create;
+- (instancetype _Nullable)initWithPrimaryKey:(id _Nullable)primaryKeyValue;
+- (instancetype _Nullable)initWithPrimaryKey:(id _Nullable)primaryKeyValue createIfNonexistent:(BOOL)create;
 
-- (NSArray *)changedFieldNames;
+- (NSArray * _Nonnull)changedFieldNames;
 - (void)revertUnsavedChanges;
-- (void)revertUnsavedChangeToFieldName:(NSString *)fieldName;
+- (void)revertUnsavedChangeToFieldName:(NSString * _Nonnull)fieldName;
 - (void)delete;
 
 // SELECTs allow optional query placeholders:
@@ -100,36 +100,36 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 //
 // The variadic and array equivalents otherwise behave identically. "arguments" arrays can be nil.
 
-+ (NSArray *)allInstances;
++ (NSArray * _Nullable)allInstances;
 
-+ (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE, ...;
-+ (instancetype)firstInstanceWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
++ (instancetype _Nullable)firstInstanceWhere:(NSString * _Nullable)queryAfterWHERE, ...;
++ (instancetype _Nullable)firstInstanceWhere:(NSString * _Nullable)queryAfterWHERE arguments:(NSArray * _Nullable)arguments;
 
-+ (NSArray *)instancesWhere:(NSString *)queryAfterWHERE, ...;
-+ (NSArray *)instancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)array;
++ (NSArray * _Nullable)instancesWhere:(NSString * _Nullable)queryAfterWHERE, ...;
++ (NSArray * _Nullable)instancesWhere:(NSString * _Nullable)queryAfterWHERE arguments:(NSArray * _Nullable)array;
 
-+ (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY, ...;
-+ (instancetype)firstInstanceOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
++ (instancetype _Nullable)firstInstanceOrderedBy:(NSString * _Nullable)queryAfterORDERBY, ...;
++ (instancetype _Nullable)firstInstanceOrderedBy:(NSString * _Nullable)queryAfterORDERBY arguments:(NSArray * _Nullable)arguments;
 
-+ (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY, ...;
-+ (NSArray *)instancesOrderedBy:(NSString *)queryAfterORDERBY arguments:(NSArray *)arguments;
++ (NSArray * _Nullable)instancesOrderedBy:(NSString * _Nullable)queryAfterORDERBY, ...;
++ (NSArray * _Nullable)instancesOrderedBy:(NSString * _Nullable)queryAfterORDERBY arguments:(NSArray * _Nullable)arguments;
 
 + (NSUInteger)numberOfInstances;
-+ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE, ...;
-+ (NSUInteger)numberOfInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
++ (NSUInteger)numberOfInstancesWhere:(NSString * _Nullable)queryAfterWHERE, ...;
++ (NSUInteger)numberOfInstancesWhere:(NSString * _Nullable)queryAfterWHERE arguments:(NSArray * _Nullable)arguments;
 
 // Fetch a set of primary keys, i.e. "WHERE key IN (...)"
-+ (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues;
++ (NSArray * _Nullable)instancesWithPrimaryKeyValues:(NSArray * _Nullable)primaryKeyValues;
 
 // Return data instead of completed objects (convenient accessors to FCModel's database queue with $T/$PK parsing)
-+ (NSArray *)resultDictionariesFromQuery:(NSString *)query, ...;
-+ (NSArray *)resultDictionariesFromQuery:(NSString *)query arguments:(NSArray *)arguments;
++ (NSArray * _Nullable)resultDictionariesFromQuery:(NSString * _Nullable)query, ...;
++ (NSArray * _Nullable)resultDictionariesFromQuery:(NSString * _Nullable)query arguments:(NSArray * _Nullable)arguments;
 
-+ (NSArray *)firstColumnArrayFromQuery:(NSString *)query, ...;
-+ (NSArray *)firstColumnArrayFromQuery:(NSString *)query arguments:(NSArray *)arguments;
++ (NSArray * _Nullable)firstColumnArrayFromQuery:(NSString * _Nullable)query, ...;
++ (NSArray * _Nullable)firstColumnArrayFromQuery:(NSString * _Nullable)query arguments:(NSArray * _Nullable)arguments;
 
-+ (id)firstValueFromQuery:(NSString *)query, ...;
-+ (id)firstValueFromQuery:(NSString *)query arguments:(NSArray *)arguments;
++ (id _Nullable)firstValueFromQuery:(NSString * _Nullable)query, ...;
++ (id _Nullable)firstValueFromQuery:(NSString * _Nullable)query arguments:(NSArray * _Nullable)arguments;
 
 // These methods use a global query cache (in FCModelCachedObject). Results are cached indefinitely until their
 //  table has any writes or there's a system low-memory warning, at which point they automatically invalidate.
@@ -137,16 +137,16 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 // The next subsequent request will repopulate the cached data, either by querying the DB (cachedInstancesWhere)
 //  or calling the generator block (cachedObjectWithIdentifier).
 //
-+ (NSArray *)cachedAllInstances;
-+ (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments;
-+ (NSArray *)cachedInstancesWhere:(NSString *)queryAfterWHERE arguments:(NSArray *)arguments ignoreFieldsForInvalidation:(NSSet *)ignoredFields;
-+ (id)cachedObjectWithIdentifier:(id)identifier generator:(id (^)(void))generatorBlock;
-+ (id)cachedObjectWithIdentifier:(id)identifier ignoreFieldsForInvalidation:(NSSet *)ignoredFields generator:(id (^)(void))generatorBlock;
++ (NSArray * _Nullable)cachedAllInstances;
++ (NSArray * _Nullable)cachedInstancesWhere:(NSString * _Nullable)queryAfterWHERE arguments:(NSArray * _Nullable)arguments;
++ (NSArray * _Nullable)cachedInstancesWhere:(NSString * _Nullable)queryAfterWHERE arguments:(NSArray * _Nullable)arguments ignoreFieldsForInvalidation:(NSSet * _Nullable)ignoredFields;
++ (id _Nullable)cachedObjectWithIdentifier:(id _Nonnull)identifier generator:(id _Nullable (^ _Nonnull)(void))generatorBlock;
++ (id _Nullable)cachedObjectWithIdentifier:(id _Nonnull)identifier ignoreFieldsForInvalidation:(NSSet * _Nullable)ignoredFields generator:(id _Nullable (^ _Nonnull)(void))generatorBlock;
 
 // For subclasses to override, optional:
 - (void)didInit;
 
-+ (NSSet *)ignoredFieldNames; // Fields that exist in the table but should not be read into the model. Default empty set, cannot be nil.
++ (NSSet * _Nonnull)ignoredFieldNames; // Fields that exist in the table but should not be read into the model. Default empty set, cannot be nil.
 
 // Safe-writing helpers:
 //  - reload: reloads the current database values into this instance, overwriting any unsaved changes
@@ -161,17 +161,17 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 //  Both return YES if the transaction succeeded. May return NO if, for instance, the instance gets deleted beforehand.
 //
 - (BOOL)reload;
-- (BOOL)save:(void (^)(void))modificiationsBlock;
-- (BOOL)saveWithoutChangeNotifications:(void (^)(void))modificiationsBlock;
+- (BOOL)save:(void (^ _Nullable)(void))modificiationsBlock;
+- (BOOL)saveWithoutChangeNotifications:(void (^ _Nullable)(void))modificiationsBlock;
 
 // When using SwiftUI/Combine, call this to trigger a refresh manually if you modify fields outside of
 //  the usual save/reload/update methods, or after modifying other properties that aren't database columns
 - (void)observableObjectPropertiesWillChange;
 
 // Notification shortcuts: call on an FCModel subclass to be notified for only changes to certain fields
-+ (void)addObserver:(id)target selector:(SEL)action forChangedFields:(NSSet *)fieldNamesToWatch;
-+ (void)addObserver:(id)target selector:(SEL)action forAnyChangedFieldsExcept:(NSSet *)fieldNamesToIgnore;
-+ (void)removeObserverForFieldChanges:(id)target;
++ (void)addObserver:(id _Nonnull)target selector:(SEL _Nonnull)action forChangedFields:(NSSet * _Nullable)fieldNamesToWatch;
++ (void)addObserver:(id _Nonnull)target selector:(SEL _Nonnull)action forAnyChangedFieldsExcept:(NSSet * _Nullable)fieldNamesToIgnore;
++ (void)removeObserverForFieldChanges:(id _Nonnull)target;
 
 // To create new records with supplied primary-key values, call instanceWithPrimaryKey:, then save when done
 //  setting other fields.
@@ -183,23 +183,23 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 //  in the table or in an unsaved in-memory instance, FCModel will keep calling this up to 100 times looking for
 //  a unique value before raising an exception.
 //
-+ (id)primaryKeyValueForNewInstance;
++ (id _Nonnull)primaryKeyValueForNewInstance;
 
 // Transactions:
 //  - Cannot be nested
 //  - Enqueue and coalesce change notifications until commit (and are discarded if the transaction is rolled back)
 //  - Do not automatically "revert" changed model instances in memory after rolled-back value changes
 //
-+ (void)performTransaction:(BOOL (^)(void))block; // return YES to commit, NO to roll back
++ (void)performTransaction:(BOOL (^ _Nonnull)(void))block; // return YES to commit, NO to roll back
 + (BOOL)isInTransaction;
 
 // This variant has no control over commit/rollback; safe to potentially nest inside other transactions if you only want performance
-+ (void)performInTransactionForPerformance:(void (^)(void))block;
++ (void)performInTransactionForPerformance:(void (^ _Nonnull)(void))block;
 
 // Field info: You probably won't need this most of the time, but it's nice to have sometimes. FCModel's generating this privately
 //  anyway, so you might as well have read-only access to it if it can help you avoid some code. (I've already needed it.)
 //
-+ (FCModelFieldInfo *)infoForFieldName:(NSString *)fieldName;
++ (FCModelFieldInfo * _Nullable)infoForFieldName:(NSString * _Nonnull)fieldName;
 
 // Closing the database is not necessary in most cases. Only close it if you need to, such as if you need to delete and recreate
 //  the database file. Warning: Any FCModel call after closing will bizarrely fail until you call openDatabaseAtPath: again.
@@ -218,13 +218,13 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 + (BOOL)databaseIsOpen;
 
 // All instances of the called class in memory. Call on a subclass, not FCModel directly. You probably don't need this, until you do.
-+ (NSArray *)allLoadedInstances;
++ (NSArray * _Nonnull)allLoadedInstances;
 
 // Issues SQLite VACUUM to rebuild database and recover deleted pages. Returns NO if a transaction is in progress that prevents it.
 + (BOOL)vacuumIfPossible;
 
 // Provide a custom handler for any SQLite errors when performing queries. If unspecified or NULL, proposedException is raised on errors.
-+ (void)setQueryFailedHandler:(void (^)(NSException *proposedException, int dbErrorCode, NSString *dbErrorMessage))handler;
++ (void)setQueryFailedHandler:(void (^ _Nullable)(NSException * _Nonnull proposedException, int dbErrorCode, NSString * _Nonnull dbErrorMessage))handler;
 
 @end
 
@@ -240,9 +240,8 @@ typedef NS_ENUM(NSInteger, FCModelFieldType) {
 @interface FCModelFieldInfo : NSObject
 @property (nonatomic, readonly) BOOL nullAllowed;
 @property (nonatomic, readonly) FCModelFieldType type;
-@property (nonatomic, readonly) id defaultValue;
-@property (nonatomic, readonly) Class propertyClass;
-@property (nonatomic, readonly) NSString *propertyTypeEncoding;
+@property (nonatomic, readonly) id _Nullable defaultValue;
+@property (nonatomic, readonly) Class _Nullable propertyClass;
+@property (nonatomic, readonly) NSString * _Nonnull propertyTypeEncoding;
 @end
-
 
