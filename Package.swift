@@ -13,8 +13,7 @@ let package = Package(
             name: "FCModel",
             dependencies: ["FMDB"],
             path: "FCModel",
-            exclude: ["FCModel+ObservableObject.swift"],
-            publicHeadersPath: "FCModel"
+            exclude: ["FCModel+ObservableObject.swift"]
         )
     ]
 )
