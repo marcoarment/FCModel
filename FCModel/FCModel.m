@@ -655,6 +655,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                         id newKeyValue = [self.class primaryKeyValueForNewInstance];
                         if ([self.class instanceFromDatabaseWithPrimaryKey:newKeyValue]) continue; // already exists in database
                         [self setValue:newKeyValue forKey:key];
+                        conflict = NO;
                     } while (conflict);
                     
                 } else if (info.defaultValue) {
