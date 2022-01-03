@@ -11,7 +11,6 @@
 
 // defined in FCModel.m
 extern void fcm_onMainQueue(void (^block)(void));
-extern BOOL fcm_isMainQueue(void);
 
 @interface FCModel ()
 + (void)postChangeNotificationWithChangedFields:(NSSet *)changedFields changedObject:(FCModel *)changedObject changeType:(FCModelChangeType)changeType priorFieldValues:(NSDictionary *)priorFieldValues;
@@ -76,7 +75,7 @@ static void _sqlite3_update_hook(void *context, int sqlite_operation, char const
 
 - (void)inDatabase:(void (^)(FMDatabase *db))block
 {
-    NSParameterAssert(fcm_isMainQueue());
+    dispatch_assert_queue(dispatch_get_main_queue());
     block(self.database);
 }
 

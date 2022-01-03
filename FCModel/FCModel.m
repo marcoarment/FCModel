@@ -108,17 +108,12 @@ typedef NS_ENUM(char, FCModelInDatabaseStatus) {
     FCModelInDatabaseStatusDeleted
 };
 
-static dispatch_once_t g_isMainQueue;
-BOOL fcm_isMainQueue(void)
-{
-    dispatch_once(&g_isMainQueue, ^{ dispatch_queue_set_specific(dispatch_get_main_queue(), &g_isMainQueue, &g_isMainQueue, NULL); });
-    return dispatch_get_specific(&g_isMainQueue) == &g_isMainQueue;
-}
-
 void fcm_onMainQueue(void (^block)(void))
 {
-    dispatch_once(&g_isMainQueue, ^{ dispatch_queue_set_specific(dispatch_get_main_queue(), &g_isMainQueue, &g_isMainQueue, NULL); });
-    if (dispatch_get_specific(&g_isMainQueue) == &g_isMainQueue) { block(); }
+    static dispatch_once_t onceToken;
+    static void *key = &key;
+    dispatch_once(&onceToken, ^{ dispatch_queue_set_specific(dispatch_get_main_queue(), key, key, NULL); });
+    if (dispatch_get_specific(key) == key || NSThread.isMainThread) { block(); }
     else { dispatch_sync(dispatch_get_main_queue(), block); }
 }
 
@@ -926,8 +921,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)openDatabaseAtPath:(NSString *)path withDatabaseInitializer:(void (^)(FMDatabase *db))databaseInitializer schemaBuilder:(void (^)(FMDatabase *db, int *schemaVersion))schemaBuilder moduleName:(NSString *)moduleName
 {
-    NSParameterAssert(fcm_isMainQueue());
-    
+    dispatch_assert_queue(dispatch_get_main_queue());
+
     g_database = [[FCModelDatabase alloc] initWithDatabasePath:path];
     NSMutableDictionary *mutableFieldInfo = [NSMutableDictionary dictionary];
     NSMutableDictionary *mutableIgnoredFieldNames = [NSMutableDictionary dictionary];
