@@ -540,6 +540,29 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (NSArray *)instancesWithPrimaryKeyValues:(NSArray *)primaryKeyValues
 {
+    return [self _batchedWherePrimaryKeyValueIn:primaryKeyValues andWhere:nil arguments:nil countOnly:NULL setClauseForUpdate:nil setClauseArguments:nil];
+}
+
++ (NSArray * _Nullable)instancesWherePrimaryKeyValueIn:(NSArray * _Nullable)primaryKeyValues andWhere:(NSString * _Nullable)additionalWhereClause arguments:(NSArray * _Nullable)arguments;
+{
+    return [self _batchedWherePrimaryKeyValueIn:primaryKeyValues andWhere:additionalWhereClause arguments:arguments countOnly:NULL setClauseForUpdate:nil setClauseArguments:nil];
+}
+
++ (NSUInteger)numberOfInstancesWherePrimaryKeyValueIn:(NSArray * _Nullable)primaryKeyValues andWhere:(NSString * _Nullable)additionalWhereClause arguments:(NSArray * _Nullable)arguments
+{
+    NSUInteger count = 0;
+    [self _batchedWherePrimaryKeyValueIn:primaryKeyValues andWhere:additionalWhereClause arguments:arguments countOnly:&count setClauseForUpdate:nil setClauseArguments:nil];
+    return count;
+}
+
++ (void)executeUpdateQuerySet:(NSString * _Nonnull)setClause setArguments:(NSArray * _Nonnull)setArguments wherePrimaryKeyValueIn:(NSArray * _Nullable)primaryKeyValues andWhere:(NSString * _Nullable)additionalWhereClause arguments:(NSArray * _Nullable)additionalWhereArguments
+{
+    [self _batchedWherePrimaryKeyValueIn:primaryKeyValues andWhere:additionalWhereClause arguments:additionalWhereArguments countOnly:NULL setClauseForUpdate:setClause setClauseArguments:setArguments];
+}
+
++ (NSArray *)_batchedWherePrimaryKeyValueIn:(NSArray *)primaryKeyValues andWhere:(NSString *)additionalWhereClause arguments:(NSArray *)additionalWhereArguments countOnly:(out NSUInteger *)outCountOnly setClauseForUpdate:(NSString *)updateSetClause setClauseArguments:(NSArray *)setClauseArguments
+{
+    if (outCountOnly) *outCountOnly = 0;
     if (! checkForOpenDatabaseFatal(NO)) return nil;
     
     if (primaryKeyValues.count == 0) return @[];
@@ -552,16 +575,30 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
                 maxParameterCount = sqlite3_limit(db.sqliteHandle, SQLITE_LIMIT_VARIABLE_NUMBER, -1);
             }];
         }
+        
+        int primaryKeyCountLimitPerQuery = maxParameterCount - ((int) setClauseArguments.count + (int) additionalWhereArguments.count);
 
-        NSMutableArray *valuesArray = [NSMutableArray arrayWithCapacity:MIN(primaryKeyValues.count, maxParameterCount)];
+        NSMutableArray *valuesArray = [NSMutableArray arrayWithCapacity:MIN(primaryKeyValues.count, primaryKeyCountLimitPerQuery)];
         NSMutableString *whereClause = [NSMutableString stringWithFormat:@"%@ IN (", g_primaryKeyFieldName[self]];
         NSUInteger whereClauseLength = whereClause.length;
         
         void (^fetchChunk)(void) = ^{
             if (valuesArray.count == 0) return;
             [whereClause appendString:@")"];
-            NSArray *newInstancesThisChunk = [self _instancesWhere:whereClause argsArray:valuesArray orVAList:NULL onlyFirst:NO];
-            allFoundInstances = allFoundInstances ? [allFoundInstances arrayByAddingObjectsFromArray:newInstancesThisChunk] : newInstancesThisChunk;
+            if (additionalWhereClause.length) [whereClause appendFormat:@" AND (%@)", additionalWhereClause];
+            
+            if (updateSetClause && updateSetClause.length) {
+                NSArray *combinedArgs = [(setClauseArguments ?: @[]) arrayByAddingObjectsFromArray:(additionalWhereArguments ? [valuesArray arrayByAddingObjectsFromArray:additionalWhereArguments] : valuesArray)];
+                NSString *query = [NSString stringWithFormat:@"UPDATE $T SET %@ WHERE %@", updateSetClause, whereClause];
+                [self executeUpdateQuery:query arguments:combinedArgs];
+            } else if (outCountOnly) {
+                NSArray *combinedArgs = additionalWhereArguments ? [valuesArray arrayByAddingObjectsFromArray:additionalWhereArguments] : valuesArray;
+                *outCountOnly += [self _numberOfInstancesWhere:whereClause withVAList:NULL arguments:combinedArgs];
+            } else {
+                NSArray *combinedArgs = additionalWhereArguments ? [valuesArray arrayByAddingObjectsFromArray:additionalWhereArguments] : valuesArray;
+                NSArray *newInstancesThisChunk = [self _instancesWhere:whereClause argsArray:combinedArgs orVAList:NULL onlyFirst:NO];
+                allFoundInstances = allFoundInstances ? [allFoundInstances arrayByAddingObjectsFromArray:newInstancesThisChunk] : newInstancesThisChunk;
+            }
             
             // reset state for next chunk
             [whereClause deleteCharactersInRange:NSMakeRange(whereClauseLength, whereClause.length - whereClauseLength)];
@@ -571,7 +608,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
         for (id pkValue in primaryKeyValues) {
             [whereClause appendString:(valuesArray.count ? @",?" : @"?")];
             [valuesArray addObject:pkValue];
-            if (valuesArray.count == maxParameterCount) fetchChunk();
+            if (valuesArray.count >= primaryKeyCountLimitPerQuery) fetchChunk();
         }
         fetchChunk();
     });

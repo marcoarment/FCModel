@@ -118,8 +118,12 @@ typedef NS_ENUM(NSInteger, FCModelChangeType) {
 + (NSUInteger)numberOfInstancesWhere:(NSString * _Nullable)queryAfterWHERE, ...;
 + (NSUInteger)numberOfInstancesWhere:(NSString * _Nullable)queryAfterWHERE arguments:(NSArray * _Nullable)arguments;
 
-// Fetch a set of primary keys, i.e. "WHERE key IN (...)"
+// Batch-operate on instances matching a set of primary keys, i.e. "WHERE key IN (...)"
+// Note: "ORDER BY" clauses should not be included in the andWhere strings, since these may execute multiple queries and ordering may not be consistent
 + (NSArray * _Nullable)instancesWithPrimaryKeyValues:(NSArray * _Nullable)primaryKeyValues;
++ (NSArray * _Nullable)instancesWherePrimaryKeyValueIn:(NSArray * _Nullable)primaryKeyValues andWhere:(NSString * _Nullable)additionalWhereClause arguments:(NSArray * _Nullable)additionalWhereArguments;
++ (NSUInteger)numberOfInstancesWherePrimaryKeyValueIn:(NSArray * _Nullable)primaryKeyValues andWhere:(NSString * _Nullable)additionalWhereClause arguments:(NSArray * _Nullable)additionalWhereArguments;
++ (void)executeUpdateQuerySet:(NSString * _Nonnull)setClause setArguments:(NSArray * _Nonnull)setArguments wherePrimaryKeyValueIn:(NSArray * _Nullable)primaryKeyValues andWhere:(NSString * _Nullable)additionalWhereClause arguments:(NSArray * _Nullable)additionalWhereArguments;
 
 // Return data instead of completed objects (convenient accessors to FCModel's database queue with $T/$PK parsing)
 + (NSArray * _Nullable)resultDictionariesFromQuery:(NSString * _Nullable)query, ...;
