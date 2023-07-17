@@ -16,6 +16,15 @@
 #import <sqlite3.h>
 #import <Security/Security.h>
 
+void fcm_onMainQueue(void (^block)(void))
+{
+    static dispatch_once_t onceToken;
+    static void *key = &key;
+    dispatch_once(&onceToken, ^{ dispatch_queue_set_specific(dispatch_get_main_queue(), key, key, NULL); });
+    if (dispatch_get_specific(key) == key || NSThread.isMainThread) { block(); }
+    else { dispatch_sync(dispatch_get_main_queue(), block); }
+}
+
 //#define QUERY_PROFILING
 
 #ifdef QUERY_PROFILING
@@ -47,7 +56,7 @@ static void queryProfilePrintSummary(void)
     [queries sortUsingDescriptors:@[ [NSSortDescriptor sortDescriptorWithKey:@"totalTime" ascending:NO] ]];
     NSLog(@"============== FCModel query profiles ==================");
     for (FCModelProfiledQuery *q in queries) {
-        NSLog(@"%2.3fs (%5lx): %@", q.totalTime, (long) q.invocationCount, q.query);
+        NSLog(@"%2.3fs (%7ld): %@", q.totalTime, (long) q.invocationCount, q.query);
     }
 }
 
@@ -107,16 +116,6 @@ typedef NS_ENUM(char, FCModelInDatabaseStatus) {
     FCModelInDatabaseStatusRowExists,
     FCModelInDatabaseStatusDeleted
 };
-
-void fcm_onMainQueue(void (^block)(void))
-{
-    static dispatch_once_t onceToken;
-    static void *key = &key;
-    dispatch_once(&onceToken, ^{ dispatch_queue_set_specific(dispatch_get_main_queue(), key, key, NULL); });
-    if (dispatch_get_specific(key) == key || NSThread.isMainThread) { block(); }
-    else { dispatch_sync(dispatch_get_main_queue(), block); }
-}
-
 
 @interface FCModel () {
     FCModelInDatabaseStatus _inDatabaseStatus;
